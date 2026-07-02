@@ -1791,7 +1791,8 @@ function renderDashboard() {
   const urgent  = all.filter(c => c.status === '進行中' && c.classLeft > 0 && c.classLeft <= 2 && c.classTotal > 0).length;
   const warning = all.filter(c => c.status === '進行中' && c.classLeft <= 4 && c.classLeft > 2 && c.classTotal > 0).length;
 
-  const trainers = [...new Set(all.map(c=>c.trainer).filter(Boolean))].sort();
+  const NON_TRAINER_LABELS = new Set(['已完課', '進行中', '暫停', '結束', '待開課']);
+  const trainers = [...new Set(all.map(c=>c.trainer).filter(t => t && !NON_TRAINER_LABELS.has(t)))].sort();
 
   // ── Plan distribution ──────────────────────────────────────────
   const planCount = key => all.filter(c => (c.plan||'').match(/[ABCD]/)?.[0] === key).length;

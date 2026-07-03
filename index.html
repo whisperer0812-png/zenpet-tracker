@@ -255,6 +255,8 @@
     .act-btn:active { transform: scale(0.96); }
     .act-btn.loading { opacity: 0.4; pointer-events: none; }
     .act-btn.success { background: var(--green); color: white; border-color: var(--green); }
+    .act-btn-absence { color: #b45309; border-color: #f59e0b; }
+    .act-btn-absence:hover { background: #f59e0b !important; color: white !important; border-color: #f59e0b !important; }
     .act-btn-sm {
       flex: 0; padding: 9px 13px; border-radius: var(--radius-sm);
       border: 1.5px solid var(--border); background: var(--white);
@@ -892,6 +894,23 @@
   </div>
 </div>
 
+<!-- ── Absence Modal ── -->
+<div class="date-modal-overlay" id="absence-modal" onclick="closeAbsenceModal(event)">
+  <div class="date-modal">
+    <div class="date-modal-title" id="absence-modal-title">登記請假</div>
+    <div class="date-modal-sub" id="absence-modal-sub">請選擇請假日期</div>
+    <input type="date" id="absence-date-input">
+    <div style="margin-top:10px;">
+      <div style="font-size:12px;color:var(--muted);font-weight:600;margin-bottom:6px;">原因（選填）</div>
+      <input type="text" id="absence-reason-input" placeholder="例：腳傷、出差、家庭因素…" style="width:100%;border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:11px 14px;font-size:15px;font-family:inherit;outline:none;color:var(--text);box-sizing:border-box;">
+    </div>
+    <div class="date-modal-btns">
+      <button class="btn-cancel" onclick="closeAbsenceModal()">取消</button>
+      <button class="btn-primary" id="absence-confirm-btn">確認請假</button>
+    </div>
+  </div>
+</div>
+
 <!-- ── Main Modal ── -->
 <div class="modal-overlay" id="modal" onclick="closeModal(event)">
   <div class="modal">
@@ -1252,6 +1271,7 @@ function renderCard(c, idx = 0) {
   const actions  = [];
   if (canClass) actions.push(`<button class="act-btn" onclick="confirmDate(${c._row},'class',this)">＋ 上課</button>`);
   if (canTrain) actions.push(`<button class="act-btn" onclick="confirmDate(${c._row},'train',this)">＋ 代訓</button>`);
+  if (!done) actions.push(`<button class="act-btn act-btn-absence" onclick="confirmAbsence(${c._row},this)">＋ 請假</button>`);
   actions.push(`<button class="act-btn-sm" onclick="openModal(${c._row})">⋯</button>`);
 
   const delay = (Math.min(idx, 7) * 0.045).toFixed(3);
@@ -1352,6 +1372,68 @@ async function doAddSession() {
 function closeDateModal(e) {
   if (e && e.target !== document.getElementById('date-modal')) return;
   document.getElementById('date-modal').classList.remove('open');
+}
+
+// ── Absence Modal ───────────────────────────────────────────────
+let absenceRow = null, absenceBtn = null;
+
+function confirmAbsence(rowIndex, btn) {
+  const c = allClients.find(x => x._row === rowIndex);
+  if (!c) return;
+  if ((c.absences||[]).length >= 4) { showToast('請假最多記錄 4 筆'); return; }
+  absenceRow = rowIndex; absenceBtn = btn;
+  document.getElementById('absence-modal-title').textContent = `登記請假 — ${c.dog}`;
+  document.getElementById('absence-modal-sub').textContent   = `${(c.owner||'').split('/')[0].trim()} · ${c.trainer}`;
+  document.getElementById('absence-date-input').value        = todayStr();
+  document.getElementById('absence-reason-input').value      = '';
+  document.getElementById('absence-confirm-btn').onclick     = doAddAbsence;
+  document.getElementById('absence-modal').classList.add('open');
+  setTimeout(() => document.getElementById('absence-date-input').focus(), 100);
+}
+
+function closeAbsenceModal(e) {
+  if (e && e.target !== document.getElementById('absence-modal')) return;
+  document.getElementById('absence-modal').classList.remove('open');
+}
+
+async function doAddAbsence() {
+  const raw    = document.getElementById('absence-date-input').value;
+  const reason = document.getElementById('absence-reason-input').value.trim();
+  if (!raw) { showToast('請選擇請假日期'); return; }
+  const date = raw.replaceAll('-', '/');
+  closeAbsenceModal();
+
+  const rowIndex = absenceRow, btn = absenceBtn;
+  const c = allClients.find(x => x._row === rowIndex);
+  if (!c) return;
+  if (btn) btn.classList.add('loading');
+
+  if (isDemo) {
+    await sleep(300);
+    if (!c.absences) c.absences = [];
+    c.absences.push(date);
+    if (reason) c.notes = c.notes ? c.notes + ' / 請假：' + reason : '請假：' + reason;
+    showToast(`✓ 已登記請假（${date}）${reason ? '：' + reason : ''}`);
+    if (btn) btn.classList.remove('loading');
+    renderAll();
+    return;
+  }
+
+  try {
+    const json = await fetch(SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'addAbsence', rowIndex, date, reason })
+    }).then(r => r.json());
+    if (!json.success) throw new Error(json.error);
+    if (!c.absences) c.absences = [];
+    c.absences.push(date);
+    showToast(`✓ 已登記請假（${date}）${reason ? '：' + reason : ''}（已同步）`);
+    if (btn) btn.classList.add('success');
+    setTimeout(() => { if (btn) { btn.classList.remove('loading'); btn.classList.remove('success'); } renderAll(); }, 700);
+  } catch (err) {
+    showToast(`⚠️ ${err.message}`);
+    if (btn) btn.classList.remove('loading');
+  }
 }
 
 // ── Main modal ─────────────────────────────────────────────────

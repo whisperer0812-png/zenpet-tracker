@@ -1165,10 +1165,10 @@ function renderAlerts() {
 
 function renderTrainerTabs() {
   const dataTrainers = [...new Set(allClients.map(c=>c.trainer).filter(Boolean))];
-  const merged = [...new Set([...TRAINERS_INFO.map(t=>t.name), ...dataTrainers])];
-  merged.sort((a,b) => {
-    const ai = TRAINERS_INFO.findIndex(t=>t.name===a);
-    const bi = TRAINERS_INFO.findIndex(t=>t.name===b);
+  // 只保留實際有客戶資料的訓練師，依 TRAINERS_INFO 順序排列
+  dataTrainers.sort((a,b) => {
+    const ai = TRAINERS_INFO.findIndex(t => a.includes(t.name));
+    const bi = TRAINERS_INFO.findIndex(t => b.includes(t.name));
     if (ai !== -1 && bi !== -1) return ai - bi;
     if (ai !== -1) return -1;
     if (bi !== -1) return 1;
@@ -1176,7 +1176,7 @@ function renderTrainerTabs() {
   });
   document.getElementById('trainer-tabs').innerHTML = [
     `<button class="tab-btn ${activeTrainer==='all'?'active':''}" onclick="setTrainer('all')">全部<span class="tab-count">${allClients.length}</span></button>`,
-    ...merged.map(t => {
+    ...dataTrainers.map(t => {
       const cnt = allClients.filter(c=>c.trainer===t).length;
       return `<button class="tab-btn ${activeTrainer===t?'active':''}" onclick="setTrainer('${esc(t)}')">${esc(t)}<span class="tab-count">${cnt}</span></button>`;
     })

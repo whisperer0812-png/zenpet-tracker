@@ -1465,7 +1465,6 @@ function ncLookupById(val) {
     fill('nc-owner',   c.owner);
     fill('nc-email',   c.email);
     fill('nc-address', c.address);
-    if (c.trainer) document.getElementById('nc-trainer').value = c.trainer;
 
     hint.className = 'nc-lookup-hint show';
     hint.textContent = `✓ 找到「${c.dog}」（飼主：${c.owner||'—'}），資料已自動填入，可直接修改`;

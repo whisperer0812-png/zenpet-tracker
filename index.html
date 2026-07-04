@@ -199,7 +199,10 @@
     .badge-plan-A     { background: #daeee6; color: #1b6a4a; }
     .badge-plan-B     { background: #d9eaf6; color: #1a4070; }
     .badge-plan-D     { background: #f4e8f8; color: #6a1a7a; }
+    .badge-plan-諮    { background: #fff3e0; color: #b45309; }
     .badge-plan-other { background: var(--gray-bg); color: var(--muted); }
+    .badge-consult-pending { background: #fff3e0; color: #b45309; font-size:10px; font-weight:700; padding:2px 8px; border-radius:20px; }
+    .badge-consult-done    { background: #daeee6; color: #1b6a4a; font-size:10px; font-weight:700; padding:2px 8px; border-radius:20px; }
     .badge-active  { background: #daeee6; color: #1b6a4a; }
     .badge-paused  { background: var(--gray-bg); color: #666; }
     .badge-done    { background: var(--gray-bg); color: #999; }
@@ -399,6 +402,13 @@
       margin-right: 6px; vertical-align: middle;
       letter-spacing: 0.02em;
     }
+
+    /* Consultation card */
+    .card-consult { border-left: 3px solid #f59e0b; }
+    .consult-status-row { display:flex; align-items:center; justify-content:space-between; padding:6px 0; }
+    .consult-check { color:#1b6a4a; font-weight:700; font-size:13px; }
+    .consult-pending-txt { color:#b45309; font-weight:600; font-size:13px; }
+    .consult-date { font-size:12px; color:var(--muted); margin-top:2px; }
 
     /* Progress breakdown */
     .prog-breakdown {
@@ -1317,15 +1327,20 @@ function renderClients() {
 function renderCard(c, idx = 0) {
   const owner   = (c.owner||'').split('/')[0].trim();
   const phone   = (c.owner||'').includes('/') ? (c.owner||'').split('/')[1]?.trim() : '';
-  const urgent  = c.status === '進行中' && c.classLeft > 0 && c.classLeft <= 2 && c.classTotal > 0;
-  const warning = c.status === '進行中' && c.classLeft <= 4 && c.classLeft > 2 && c.classTotal > 0;
-  const done    = c.status === '已結課' || (c.classLeft === 0 && c.classTotal > 0);
+  const isConsult = (c.plan||'').includes('行為諮詢') || (c.plan||'').includes('諮詢');
+  const consultDone = isConsult && (c.classDone >= 1 || c.status === '已結課');
+  const urgent  = !isConsult && c.status === '進行中' && c.classLeft > 0 && c.classLeft <= 2 && c.classTotal > 0;
+  const warning = !isConsult && c.status === '進行中' && c.classLeft <= 4 && c.classLeft > 2 && c.classTotal > 0;
+  const done    = consultDone || c.status === '已結課' || (c.classLeft === 0 && c.classTotal > 0);
   const paused  = c.status === '暫停';
 
-  const cardCls   = urgent ? 'card-urgent' : warning ? 'card-warning' : paused ? 'card-paused' : done ? 'card-done' : 'card-ok';
-  const planKey   = (c.plan||'').match(/[ABD]/)?.[0] || 'other';
+  const cardCls   = isConsult && !consultDone ? 'card-ok card-consult'
+    : urgent ? 'card-urgent' : warning ? 'card-warning' : paused ? 'card-paused' : done ? 'card-done' : 'card-ok';
+  const planKey   = isConsult ? '諮' : (c.plan||'').match(/[ABD]/)?.[0] || 'other';
   const planBadge = `<span class="badge badge-plan-${planKey}">${esc(c.plan||'—')}</span>`;
-  const statusBadge = paused ? '<span class="badge badge-paused">暫停</span>'
+  const statusBadge = isConsult
+    ? (consultDone ? '<span class="badge-consult-done">已完成</span>' : '<span class="badge-consult-pending">待諮詢</span>')
+    : paused ? '<span class="badge badge-paused">暫停</span>'
     : done ? '<span class="badge badge-done">結課</span>'
     : '<span class="badge badge-active">進行中</span>';
 
@@ -1358,11 +1373,15 @@ function renderCard(c, idx = 0) {
   if (c.absences?.length) footerRows.push(`<div class="info-row">🗓 請假：${c.absences.map(a=>esc(a)).join(' · ')}</div>`);
 
   const canClass = !done;
-  const canTrain = !done && !(c.trainTotal > 0 && c.trainLeft === 0);
+  const canTrain = !done && c.trainTotal > 0 && c.trainLeft > 0;
   const actions  = [];
-  if (canClass) actions.push(`<button class="act-btn" onclick="confirmDate(${c._row},'class',this)">＋ 上課</button>`);
-  if (canTrain) actions.push(`<button class="act-btn" onclick="confirmDate(${c._row},'train',this)">＋ 代訓</button>`);
-  if (!done) actions.push(`<button class="act-btn act-btn-absence" onclick="confirmAbsence(${c._row},this)">＋ 請假</button>`);
+  if (isConsult && !consultDone) {
+    actions.push(`<button class="act-btn" onclick="confirmDate(${c._row},'class',this)">✓ 完成諮詢</button>`);
+  } else {
+    if (canClass) actions.push(`<button class="act-btn" onclick="confirmDate(${c._row},'class',this)">＋ 上課</button>`);
+    if (canTrain) actions.push(`<button class="act-btn" onclick="confirmDate(${c._row},'train',this)">＋ 代訓</button>`);
+    if (!done) actions.push(`<button class="act-btn act-btn-absence" onclick="confirmAbsence(${c._row},this)">＋ 請假</button>`);
+  }
   actions.push(`<button class="act-btn-sm" onclick="openModal(${c._row})">⋯</button>`);
 
   const delay = (Math.min(idx, 7) * 0.045).toFixed(3);
@@ -1379,6 +1398,16 @@ function renderCard(c, idx = 0) {
       </div>
       <div class="card-badges">${planBadge}${statusBadge}</div>
     </div>
+    ${isConsult ? `
+    <div class="card-progress">
+      <div class="consult-status-row">
+        <span class="prog-label">行為諮詢</span>
+        ${consultDone
+          ? `<span class="consult-check">✓ 已完成</span>`
+          : `<span class="consult-pending-txt">尚未進行</span>`}
+      </div>
+      ${consultDone && lastLesson ? `<div class="consult-date">📅 ${esc(lastLesson.date)}${lastLesson.time ? ' ' + esc(lastLesson.time) : ''}</div>` : ''}
+    </div>` : `
     <div class="card-progress">
       <div class="prog-row">
         <div class="prog-top">
@@ -1391,7 +1420,7 @@ function renderCard(c, idx = 0) {
         <div class="prog-track"><div class="prog-fill ${fillCls}" style="width:${combinedPct}%"></div></div>
       </div>
       <div class="prog-breakdown">${breakdown}</div>
-    </div>
+    </div>`}
     ${footerRows.length ? `<div class="card-footer-info">${footerRows.join('')}</div>` : ''}
     <div class="card-actions">${actions.join('')}</div>
   </div>`;

@@ -1103,18 +1103,8 @@
           </select>
         </div>
         <div class="nc-field">
-          <label class="nc-label">週期／備註</label>
-          <input class="nc-input" id="nc-period" type="text" placeholder="例：每週一、三">
-        </div>
-      </div>
-      <div class="nc-row">
-        <div class="nc-field">
           <label class="nc-label">上課總堂數</label>
           <input class="nc-input" id="nc-class-total" type="number" min="0" placeholder="0">
-        </div>
-        <div class="nc-field">
-          <label class="nc-label">代訓總堂數（選填）</label>
-          <input class="nc-input" id="nc-train-total" type="number" min="0" placeholder="0">
         </div>
       </div>
     </div>
@@ -1421,14 +1411,13 @@ const PLAN_DEFAULTS = { 'A方案': 6, 'B方案': 20 };
 
 function openNewClientModal() {
   // Reset form
-  ['nc-id','nc-dog','nc-owner','nc-email','nc-address','nc-period','nc-notes'].forEach(id => {
+  ['nc-id','nc-dog','nc-owner','nc-email','nc-address','nc-notes'].forEach(id => {
     document.getElementById(id).value = '';
     document.getElementById(id).classList.remove('filled');
   });
   document.getElementById('nc-plan').value = '';
   document.getElementById('nc-trainer').value = '';
   document.getElementById('nc-class-total').value = '';
-  document.getElementById('nc-train-total').value = '';
   document.getElementById('nc-start-date').value = '';
   document.getElementById('nc-lookup-hint').className = 'nc-lookup-hint';
   document.getElementById('nc-lookup-hint').textContent = '';
@@ -1502,9 +1491,7 @@ async function submitNewClient() {
         email:      get('nc-email'),
         address:    get('nc-address'),
         plan:       get('nc-plan'),
-        period:     get('nc-period'),
         classTotal: Number(get('nc-class-total')) || 0,
-        trainTotal: Number(get('nc-train-total')) || 0,
         trainer,
         startDate:  get('nc-start-date').replaceAll('-', '/'),
         notes:      get('nc-notes'),

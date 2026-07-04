@@ -940,10 +940,17 @@
   <div class="date-modal">
     <div class="date-modal-title" id="date-modal-title">確認日期</div>
     <div class="date-modal-sub" id="date-modal-sub">請選擇上課日期</div>
-    <input type="date" id="date-input">
+    <input type="date" id="date-input" onchange="checkDupDate()">
     <div style="margin-top:10px;">
       <div style="font-size:12px;color:var(--muted);font-weight:600;margin-bottom:6px;">時間（選填）</div>
       <input type="time" id="time-input" style="width:100%;border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:11px 14px;font-size:15px;font-family:inherit;outline:none;color:var(--text);">
+    </div>
+    <div id="date-dup-warning" style="display:none;margin-top:10px;background:#fff3cd;border:1.5px solid #f0a500;border-radius:8px;padding:10px 12px;">
+      <div style="font-size:12px;font-weight:800;color:#b45309;">⚠️ 這隻狗今天已有上課紀錄</div>
+      <div id="date-dup-detail" style="font-size:11px;color:#92400e;margin-top:3px;"></div>
+      <label style="display:flex;align-items:center;gap:6px;margin-top:8px;font-size:12px;font-weight:700;color:#b45309;cursor:pointer;">
+        <input type="checkbox" id="date-dup-confirm"> 我確定要新增（非重複按錯）
+      </label>
     </div>
     <div class="date-modal-btns">
       <button class="btn-cancel" onclick="closeDateModal()">取消</button>
@@ -1450,6 +1457,24 @@ function renderCard(c, idx = 0) {
 // ── Date confirm ───────────────────────────────────────────────
 let pendingRow = null, pendingType = null, pendingBtn = null;
 
+function checkDupDate() {
+  const raw = document.getElementById('date-input').value;
+  const warn = document.getElementById('date-dup-warning');
+  const detail = document.getElementById('date-dup-detail');
+  const cb = document.getElementById('date-dup-confirm');
+  if (!raw || !pendingRow) { warn.style.display = 'none'; return; }
+  const date = raw.replaceAll('-', '/');
+  const c = allClients.find(x => x._row === pendingRow);
+  const dups = (c?.lessonDates || []).filter(l => l.date === date);
+  if (dups.length > 0) {
+    detail.textContent = `已有 ${dups.length} 筆：${dups.map(l => l.type || '上課').join('、')}`;
+    cb.checked = false;
+    warn.style.display = 'block';
+  } else {
+    warn.style.display = 'none';
+  }
+}
+
 function confirmDate(rowIndex, type, btn) {
   const c = allClients.find(x => x._row === rowIndex);
   if (!c) return;
@@ -1458,8 +1483,11 @@ function confirmDate(rowIndex, type, btn) {
   document.getElementById('date-modal-title').textContent = `登記${label} — ${c.dog}`;
   document.getElementById('date-modal-sub').textContent   = `請選擇這次${label}的日期`;
   document.getElementById('date-input').value             = todayStr();
+  document.getElementById('date-dup-warning').style.display = 'none';
+  document.getElementById('date-dup-confirm').checked = false;
   document.getElementById('date-confirm-btn').onclick     = doAddSession;
   document.getElementById('date-modal').classList.add('open');
+  checkDupDate();
 }
 
 async function doAddSession() {
@@ -1467,6 +1495,15 @@ async function doAddSession() {
   const time = document.getElementById('time-input').value || '';
   if (!raw) { showToast('請選擇日期'); return; }
   const date = raw.replaceAll('-', '/');
+
+  // duplicate guard
+  const warn = document.getElementById('date-dup-warning');
+  const cb   = document.getElementById('date-dup-confirm');
+  if (warn.style.display !== 'none' && !cb.checked) {
+    showToast('⚠️ 請先勾選確認，再登記重複日期');
+    return;
+  }
+
   closeDateModal();
 
   const rowIndex = pendingRow, type = pendingType, btn = pendingBtn;
@@ -2103,24 +2140,35 @@ function openLessonBreakdown(period) {
 
   const sorted = [...lessons].sort((a, b) => a.date.localeCompare(b.date));
 
+  // detect duplicates: same dog + same date > 1
+  const dupKey = l => `${l.dog}__${l.date}`;
+  const keyCount = {};
+  sorted.forEach(l => { const k = dupKey(l); keyCount[k] = (keyCount[k]||0) + 1; });
+  const dupCount = Object.values(keyCount).filter(n => n > 1).reduce((s, n) => s + n, 0);
+
   document.getElementById('breakdown-modal-body').innerHTML = lessons.length === 0
     ? `<div class="breakdown-empty">這段期間沒有上課紀錄</div>`
-    : `<div style="display:flex;gap:12px;margin-bottom:14px;flex-wrap:wrap;">
+    : `<div style="display:flex;gap:12px;margin-bottom:10px;flex-wrap:wrap;align-items:center;">
         ${Object.entries(byType).filter(([,n])=>n>0).map(([k,n])=>`
           <span style="font-size:12px;font-weight:700;color:var(--muted);">${k} <span style="color:var(--text);font-size:15px;">${n}</span> 堂</span>
         `).join('')}
+        ${dupCount > 0 ? `<span style="margin-left:auto;font-size:11px;font-weight:800;color:#b45309;background:#fff3cd;border:1px solid #f0a500;border-radius:6px;padding:2px 8px;">⚠️ 疑似重複 ${dupCount} 筆</span>` : ''}
        </div>
+       ${dupCount > 0 ? `<div style="font-size:11px;color:#92400e;margin-bottom:10px;">同一隻狗同一天出現超過 1 筆，請到 Google Sheet「上課紀錄」分頁刪除多餘的列。</div>` : ''}
        <table class="breakdown-table">
          <thead><tr>
            <th>日期</th><th>狗狗</th><th>訓練師</th><th>類型</th>
          </tr></thead>
          <tbody>
-           ${sorted.map(l => `<tr>
-             <td>${esc(l.date)}</td>
-             <td style="font-weight:700;">${esc(l.dog)}</td>
-             <td style="color:var(--muted);font-size:11px;">${esc(l.trainer||'')}</td>
-             <td><span class="lesson-type-badge ${l.type==='代訓'?'lt-train':'lt-class'}">${esc(l.type||'上課')}</span></td>
-           </tr>`).join('')}
+           ${sorted.map(l => {
+             const isDup = keyCount[dupKey(l)] > 1;
+             return `<tr style="${isDup ? 'background:#fff8e6;' : ''}">
+               <td>${esc(l.date)}</td>
+               <td style="font-weight:700;">${esc(l.dog)}${isDup ? ' <span style="font-size:10px;color:#b45309;font-weight:800;">重複</span>' : ''}</td>
+               <td style="color:var(--muted);font-size:11px;">${esc(l.trainer||'')}</td>
+               <td><span class="lesson-type-badge ${l.type==='代訓'?'lt-train':'lt-class'}">${esc(l.type||'上課')}</span></td>
+             </tr>`;
+           }).join('')}
          </tbody>
        </table>`;
 

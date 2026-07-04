@@ -1,0 +1,3021 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ZenPet · 堂數追蹤</title>
+  <style>
+    :root {
+      --bg:           #edf5f9;
+      --white:        #ffffff;
+      --border:       #c4d8e7;
+      --border-light: #d7eaf4;
+      --text:         #1a2d38;
+      --muted:        #6a8ba0;
+      --accent:       #3d8c72;
+      --accent-light: #daeee6;
+      --red:          #c94040;
+      --red-bg:       #fef2f2;
+      --red-border:   #fcc9c9;
+      --yellow:       #c4880c;
+      --yellow-bg:    #fdf8ed;
+      --yellow-border:#f4d48a;
+      --green:        #47a88a;
+      --blue:         #2e88c5;
+      --gray:         #8fa8b8;
+      --gray-bg:      #edf4f8;
+      --radius:       16px;
+      --radius-sm:    10px;
+      --shadow-sm:    0 1px 4px rgba(20, 70, 100, 0.08);
+      --shadow:       0 4px 16px rgba(20, 70, 100, 0.12);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'PingFang TC', 'Noto Sans TC', 'Helvetica Neue', sans-serif;
+      background: var(--bg); color: var(--text);
+      min-height: 100vh; -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── Header ── */
+    .header {
+      background: var(--white); border-bottom: 1px solid var(--border);
+      padding: 12px 20px; display: flex; align-items: center;
+      justify-content: space-between; position: sticky; top: 0;
+      z-index: 200; box-shadow: var(--shadow-sm);
+    }
+    .logo-wrap { display: flex; align-items: center; gap: 10px; }
+    .logo-mark {
+      width: 34px; height: 34px; background: var(--accent);
+      border-radius: 9px; display: flex; align-items: center;
+      justify-content: center; color: white; font-size: 15px;
+      font-weight: 900; letter-spacing: -0.5px;
+    }
+    .logo { font-size: 15px; font-weight: 800; letter-spacing: 0.06em; color: var(--accent); }
+    .logo-sub { font-size: 10px; color: var(--muted); margin-top: 1px; }
+    .header-right { display: flex; align-items: center; gap: 8px; }
+    .last-updated { font-size: 11px; color: var(--muted); }
+    .refresh-btn {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); padding: 7px 14px;
+      cursor: pointer; font-size: 12px; color: var(--muted);
+      display: flex; align-items: center; gap: 5px;
+      transition: all 0.15s; font-weight: 500;
+    }
+    .refresh-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .refresh-btn.spinning .icon { animation: spin 0.7s linear infinite; display: inline-block; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Banner ── */
+    .setup-banner {
+      margin: 14px 18px 0;
+      background: #fffdf0; border: 1px solid #f0d060;
+      border-radius: var(--radius-sm); padding: 11px 14px;
+      font-size: 12px; color: #7a5c00; line-height: 1.5;
+      display: flex; justify-content: space-between; align-items: flex-start; gap: 10px;
+    }
+    .setup-banner code {
+      background: rgba(0,0,0,0.07); padding: 1px 6px;
+      border-radius: 4px; font-size: 11px;
+    }
+    .banner-close { color: inherit; opacity: 0.5; cursor: pointer; flex-shrink: 0; font-size: 16px; line-height: 1; }
+
+    /* ── Stats ── */
+    .stats-row {
+      display: grid; grid-template-columns: repeat(3, 1fr);
+      gap: 10px; padding: 14px 18px 12px;
+    }
+    .stat-card {
+      background: var(--white); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 14px 12px 13px;
+      text-align: center; box-shadow: var(--shadow-sm);
+    }
+    .stat-icon { font-size: 17px; margin-bottom: 5px; }
+    .stat-num { font-size: 28px; font-weight: 900; line-height: 1; letter-spacing: -0.5px; }
+    .stat-num.red   { color: var(--red); }
+    .stat-num.green { color: var(--accent); }
+    .stat-label { font-size: 10px; color: var(--muted); margin-top: 4px; font-weight: 500; }
+
+    /* ── Alert ── */
+    .alert-section {
+      margin: 0 18px 12px; background: var(--red-bg);
+      border: 1px solid var(--red-border); border-radius: var(--radius); overflow: hidden;
+    }
+    .alert-header {
+      padding: 10px 14px; font-size: 12px; font-weight: 700; color: var(--red);
+      display: flex; align-items: center; gap: 6px;
+      background: rgba(192,57,43,0.04);
+    }
+    .alert-item {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 9px 14px; border-top: 1px solid var(--red-border);
+      font-size: 13px; cursor: pointer;
+    }
+    .alert-item:hover { background: rgba(192,57,43,0.04); }
+    .alert-dog { font-weight: 700; }
+    .alert-meta { color: var(--muted); margin-left: 5px; font-size: 11px; }
+
+    /* ── Tabs ── */
+    .section-group { padding: 0 18px; }
+    .tabs-scroll {
+      display: flex; gap: 7px; overflow-x: auto;
+      -webkit-overflow-scrolling: touch; scrollbar-width: none; padding-bottom: 10px;
+    }
+    .tabs-scroll::-webkit-scrollbar { display: none; }
+    .tab-btn {
+      padding: 7px 15px; border-radius: 20px; border: 1.5px solid var(--border);
+      background: var(--white); font-size: 13px; cursor: pointer;
+      white-space: nowrap; font-weight: 600; transition: all 0.15s;
+      display: flex; align-items: center; gap: 5px;
+    }
+    .tab-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .tab-btn.active { background: var(--accent); color: white; border-color: var(--accent); }
+    .tab-count {
+      background: rgba(0,0,0,0.10); color: inherit;
+      border-radius: 8px; padding: 1px 6px; font-size: 10px; font-weight: 700;
+    }
+    .tab-btn.active .tab-count { background: rgba(255,255,255,0.25); }
+
+    /* ── Status Filter ── */
+    .status-scroll {
+      display: flex; gap: 6px; overflow-x: auto;
+      padding-bottom: 12px; scrollbar-width: none;
+    }
+    .status-scroll::-webkit-scrollbar { display: none; }
+    .status-chip {
+      padding: 5px 13px; border-radius: 14px; border: 1.5px solid var(--border);
+      background: var(--white); font-size: 12px; cursor: pointer;
+      transition: all 0.15s; font-weight: 500; white-space: nowrap; flex-shrink: 0;
+    }
+    .status-chip:hover { border-color: var(--text); }
+    .status-chip.active { background: var(--text); color: white; border-color: var(--text); }
+
+    /* ── Grid ── */
+    .clients-grid {
+      padding: 0 18px 36px;
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px;
+    }
+
+    /* ── Card ── */
+    .client-card {
+      background: var(--white); border: 1px solid var(--border);
+      border-radius: var(--radius); overflow: hidden;
+      transition: box-shadow 0.2s; position: relative;
+    }
+    .client-card:hover { box-shadow: var(--shadow); }
+    .client-card::before {
+      content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px;
+    }
+    .card-urgent::before  { background: var(--red); }
+    .card-warning::before { background: var(--yellow); }
+    .card-ok::before      { background: var(--green); }
+    .card-paused::before  { background: var(--gray); }
+    .card-done::before    { background: #ddd; }
+    .card-paused { opacity: 0.7; }
+    .card-done   { opacity: 0.52; }
+
+    .card-header {
+      padding: 14px 14px 10px 20px;
+      display: flex; justify-content: space-between; align-items: flex-start;
+    }
+    .card-info { flex: 1; min-width: 0; }
+    .dog-name {
+      font-size: 17px; font-weight: 800; letter-spacing: -0.2px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .owner-line { font-size: 12px; color: var(--muted); margin-top: 2px; }
+    .meta-line {
+      font-size: 11px; color: var(--muted); margin-top: 4px;
+      display: flex; align-items: center; gap: 5px; flex-wrap: wrap;
+    }
+    .meta-dot { color: var(--border-light); }
+    .card-badges {
+      display: flex; flex-direction: column; align-items: flex-end;
+      gap: 4px; flex-shrink: 0; margin-left: 10px;
+    }
+    .badge {
+      padding: 3px 9px; border-radius: 7px;
+      font-size: 10px; font-weight: 700; white-space: nowrap;
+    }
+    .badge-plan-A     { background: #daeee6; color: #1b6a4a; }
+    .badge-plan-B     { background: #d9eaf6; color: #1a4070; }
+    .badge-plan-D     { background: #f4e8f8; color: #6a1a7a; }
+    .badge-plan-諮    { background: #fff3e0; color: #b45309; }
+    .badge-plan-other { background: var(--gray-bg); color: var(--muted); }
+    .badge-consult-pending { background: #fff3e0; color: #b45309; font-size:10px; font-weight:700; padding:2px 8px; border-radius:20px; }
+    .badge-consult-done    { background: #daeee6; color: #1b6a4a; font-size:10px; font-weight:700; padding:2px 8px; border-radius:20px; }
+    .badge-active  { background: #daeee6; color: #1b6a4a; }
+    .badge-paused  { background: var(--gray-bg); color: #666; }
+    .badge-done    { background: var(--gray-bg); color: #999; }
+
+    /* Progress */
+    .card-progress { padding: 2px 14px 10px 20px; }
+    .prog-row { margin-bottom: 8px; }
+    .prog-row:last-child { margin-bottom: 0; }
+    .prog-top {
+      display: flex; justify-content: space-between;
+      align-items: center; margin-bottom: 5px;
+    }
+    .prog-label { font-size: 11px; color: var(--muted); font-weight: 600; }
+    .prog-right { display: flex; align-items: center; gap: 6px; }
+    .prog-count { font-size: 11px; color: var(--muted); }
+    .remaining-badge {
+      padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 800;
+    }
+    .rb-red    { background: var(--red-bg);    color: var(--red); }
+    .rb-yellow { background: var(--yellow-bg); color: var(--yellow); }
+    .rb-green  { background: var(--accent-light); color: var(--accent); }
+    .rb-done   { background: var(--gray-bg); color: var(--gray); }
+    .prog-track { height: 6px; background: var(--bg); border-radius: 3px; overflow: hidden; }
+    .prog-fill  { height: 100%; border-radius: 3px; transition: width 0.4s ease; }
+    .pf-red    { background: var(--red); }
+    .pf-yellow { background: var(--yellow); }
+    .pf-green  { background: var(--green); }
+    .pf-blue   { background: var(--blue); }
+    .pf-done   { background: #ccc; }
+
+    /* Footer info */
+    .card-footer-info { padding: 0 14px 8px 20px; }
+    .info-row {
+      font-size: 11px; color: var(--muted); margin-bottom: 3px;
+      display: flex; align-items: center; gap: 4px;
+    }
+    .info-row:last-child { margin-bottom: 0; }
+    .last-lesson-hl { color: var(--accent); font-weight: 700; }
+
+    /* Actions */
+    .card-actions {
+      padding: 9px 12px 11px 18px; display: flex; gap: 7px;
+      border-top: 1px solid var(--border-light);
+    }
+    .act-btn {
+      flex: 1; padding: 9px 6px; border-radius: var(--radius-sm);
+      border: 1.5px solid var(--border); background: var(--white);
+      font-size: 13px; cursor: pointer; font-weight: 600;
+      display: flex; align-items: center; justify-content: center; gap: 4px;
+      transition: all 0.15s; color: var(--text);
+    }
+    .act-btn:hover  { background: var(--accent); color: white; border-color: var(--accent); }
+    .act-btn:active { transform: scale(0.96); }
+    .act-btn.loading { opacity: 0.4; pointer-events: none; }
+    .act-btn.success { background: var(--green); color: white; border-color: var(--green); }
+    .act-btn-absence { color: #b45309; border-color: #f59e0b; }
+    .act-btn-absence:hover { background: #f59e0b !important; color: white !important; border-color: #f59e0b !important; }
+    .act-btn-sm {
+      flex: 0; padding: 9px 13px; border-radius: var(--radius-sm);
+      border: 1.5px solid var(--border); background: var(--white);
+      font-size: 15px; cursor: pointer; transition: all 0.15s; color: var(--muted);
+    }
+    .act-btn-sm:hover { background: var(--bg); color: var(--text); }
+
+    /* ── Date Confirm Modal ── */
+    .date-modal-overlay {
+      display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4);
+      z-index: 600; align-items: flex-end; justify-content: center;
+    }
+    .date-modal-overlay.open { display: flex; }
+    .date-modal {
+      background: var(--white); border-radius: var(--radius) var(--radius) 0 0;
+      width: 100%; max-width: 440px; padding: 22px 20px 32px;
+    }
+    .date-modal-title { font-size: 16px; font-weight: 800; margin-bottom: 3px; }
+    .date-modal-sub   { font-size: 12px; color: var(--muted); margin-bottom: 16px; }
+    .date-modal input[type="date"] {
+      width: 100%; border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm); padding: 12px 14px;
+      font-size: 15px; font-family: inherit; outline: none; color: var(--text);
+    }
+    .date-modal input[type="date"]:focus { border-color: var(--accent); }
+    .date-modal-btns { display: flex; gap: 10px; margin-top: 14px; }
+
+    /* ── Main Modal ── */
+    .modal-overlay {
+      display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45);
+      z-index: 500; align-items: flex-end; justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: var(--white); border-radius: var(--radius) var(--radius) 0 0;
+      width: 100%; max-width: 520px; padding: 22px 20px 36px;
+      max-height: 84vh; overflow-y: auto;
+    }
+    .modal-dog-name { font-size: 20px; font-weight: 900; margin-bottom: 2px; }
+    .modal-sub      { font-size: 12px; color: var(--muted); margin-bottom: 20px; }
+    .modal-section  { margin-bottom: 20px; }
+    .modal-section-title {
+      font-size: 11px; font-weight: 700; color: var(--muted);
+      letter-spacing: 0.07em; text-transform: uppercase;
+      margin-bottom: 10px; padding-bottom: 7px;
+      border-bottom: 1px solid var(--border-light);
+    }
+    .modal-field { margin-bottom: 12px; }
+    .modal-label { font-size: 12px; color: var(--muted); font-weight: 600; margin-bottom: 5px; }
+    .modal textarea, .modal select, .modal input[type="date"] {
+      width: 100%; border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm); padding: 10px 13px;
+      font-size: 14px; font-family: inherit; outline: none;
+      resize: vertical; color: var(--text);
+    }
+    .modal textarea:focus, .modal select:focus, .modal input:focus { border-color: var(--accent); }
+
+    /* Lesson history */
+    .lesson-list { display: flex; flex-direction: column; gap: 5px; }
+    .lesson-item {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 8px 11px; background: var(--bg); border-radius: var(--radius-sm);
+    }
+    .lesson-date { font-size: 13px; font-weight: 600; color: var(--text); }
+    .lesson-time { font-size: 12px; color: var(--muted); font-weight: 400; margin-left: 5px; }
+    .lesson-type-badge {
+      padding: 2px 8px; border-radius: 8px; font-size: 10px; font-weight: 700;
+    }
+    .lt-class   { background: var(--accent-light); color: var(--accent); }
+    .lt-train   { background: #d9eaf6; color: #1a4070; }
+    .lt-absence { background: #fff3e0; color: #b45309; }
+    .lt-force   { background: #ede9fe; color: #6d28d9; white-space: nowrap; }
+    .lesson-edit-reason {
+      border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+      padding: 5px 8px; font-size: 12px; font-family: inherit; outline: none;
+      color: var(--text); background: var(--white); flex: 1; min-width: 0;
+    }
+    .lesson-edit-reason:focus { border-color: var(--accent); }
+    .force-reason-wrap { display: none; margin-top: 7px; }
+    .force-reason-wrap input {
+      width: 100%; border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+      padding: 7px 10px; font-size: 13px; font-family: inherit; outline: none;
+      color: var(--text); box-sizing: border-box;
+    }
+    .force-reason-wrap input:focus { border-color: var(--accent); }
+    .no-lessons { font-size: 12px; color: var(--muted); padding: 6px 0; font-style: italic; }
+
+    /* Editable lesson items */
+    .lesson-item { gap: 6px; }
+    .lesson-edit-date, .lesson-edit-time, .lesson-edit-type {
+      border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+      padding: 5px 8px; font-size: 12px; font-family: inherit; outline: none;
+      color: var(--text); background: var(--white);
+    }
+    .lesson-edit-date { flex: 1; min-width: 140px; }
+    .lesson-edit-time { width: 90px; flex-shrink: 0; }
+    .lesson-edit-type { flex-shrink: 0; cursor: pointer; }
+    .lesson-edit-date:focus, .lesson-edit-time:focus, .lesson-edit-type:focus { border-color: var(--accent); }
+
+    /* Manual lesson entry */
+    .manual-add-row {
+      display: flex; gap: 7px; margin-top: 10px; align-items: center;
+    }
+    .manual-add-row input[type="date"],
+    .manual-add-row input[type="time"] {
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm); padding: 8px 11px;
+      font-size: 13px; font-family: inherit; outline: none; color: var(--text);
+    }
+    .manual-add-row input[type="date"] { flex: 1.4; min-width: 0; }
+    .manual-add-row input[type="time"] { flex: 1; min-width: 0; }
+    .manual-add-row input:focus { border-color: var(--accent); }
+    .manual-add-row select {
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm); padding: 8px 10px;
+      font-size: 13px; font-family: inherit; outline: none;
+      background: var(--white); color: var(--text); cursor: pointer;
+    }
+    .manual-add-row select:focus { border-color: var(--accent); }
+    .btn-add-lesson {
+      padding: 8px 14px; background: var(--accent-light); color: var(--accent);
+      border: 1.5px solid var(--accent); border-radius: var(--radius-sm);
+      font-size: 13px; font-weight: 700; cursor: pointer;
+      white-space: nowrap; transition: all 0.15s; flex-shrink: 0;
+    }
+    .btn-add-lesson:hover { background: var(--accent); color: white; }
+
+    /* Map link */
+    .map-link {
+      color: var(--accent); text-decoration: none;
+      font-weight: 500; word-break: break-all;
+    }
+    .map-link:hover { text-decoration: underline; }
+
+    /* Client ID badge */
+    .client-id {
+      font-size: 11px; font-weight: 700; color: var(--muted);
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: 5px; padding: 1px 6px;
+      margin-right: 6px; vertical-align: middle;
+      letter-spacing: 0.02em;
+    }
+
+    /* Consultation card */
+    .card-consult { border-left: 3px solid #f59e0b; }
+    .consult-status-row { display:flex; align-items:center; justify-content:space-between; padding:6px 0; }
+    .consult-check { color:#1b6a4a; font-weight:700; font-size:13px; }
+    .consult-pending-txt { color:#b45309; font-weight:600; font-size:13px; }
+    .consult-date { font-size:12px; color:var(--muted); margin-top:2px; }
+
+    /* Progress breakdown */
+    .prog-breakdown {
+      font-size: 11px; color: var(--muted); text-align: right;
+      margin-top: 4px; letter-spacing: 0.01em;
+    }
+
+    .modal-btns { display: flex; gap: 10px; margin-top: 20px; }
+    .btn-primary {
+      flex: 1; padding: 13px; background: var(--accent); color: white;
+      border: none; border-radius: var(--radius-sm);
+      font-size: 15px; font-weight: 700; cursor: pointer; transition: background 0.15s;
+    }
+    .btn-primary:hover { background: #2c6e57; }
+    .btn-cancel {
+      padding: 13px 22px; background: var(--bg);
+      border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+      font-size: 15px; cursor: pointer; font-weight: 500;
+    }
+
+    /* ── New Client Modal ── */
+    .nc-overlay {
+      display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45);
+      z-index: 700; align-items: flex-end; justify-content: center;
+    }
+    .nc-overlay.open { display: flex; }
+    .nc-modal {
+      background: var(--white); border-radius: var(--radius) var(--radius) 0 0;
+      width: 100%; max-width: 540px; padding: 24px 22px 36px;
+      max-height: 90vh; overflow-y: auto;
+    }
+    .nc-title { font-size: 18px; font-weight: 900; margin-bottom: 2px; }
+    .nc-sub   { font-size: 12px; color: var(--muted); margin-bottom: 20px; }
+    .nc-group { margin-bottom: 18px; }
+    .nc-group-title {
+      font-size: 10px; font-weight: 700; color: var(--muted);
+      letter-spacing: 0.08em; text-transform: uppercase;
+      margin-bottom: 10px; padding-bottom: 6px;
+      border-bottom: 1px solid var(--border-light);
+    }
+    .nc-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+    .nc-row.full { grid-template-columns: 1fr; }
+    .nc-field { display: flex; flex-direction: column; gap: 4px; }
+    .nc-label { font-size: 11px; font-weight: 700; color: var(--muted); }
+    .nc-input {
+      border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+      padding: 10px 12px; font-size: 14px; font-family: inherit;
+      outline: none; color: var(--text); width: 100%; box-sizing: border-box;
+    }
+    .nc-input:focus { border-color: var(--accent); }
+    .nc-input.filled { background: #f0faf5; border-color: var(--accent); }
+    .nc-lookup-hint {
+      display: none; margin-top: -6px; margin-bottom: 8px;
+      background: #f0faf5; border: 1.5px solid var(--accent);
+      border-radius: 8px; padding: 10px 12px;
+      font-size: 12px; color: var(--accent); font-weight: 600;
+    }
+    .nc-lookup-hint.show { display: block; }
+    .nc-btns { display: flex; gap: 10px; margin-top: 20px; }
+    .nc-add-btn {
+      background: var(--accent); color: white; border: none;
+      border-radius: var(--radius-sm); padding: 7px 14px;
+      cursor: pointer; font-size: 12px; font-weight: 700;
+      display: flex; align-items: center; gap: 5px;
+      transition: all 0.15s; white-space: nowrap;
+    }
+    .nc-add-btn:hover { background: #2c6e57; }
+    @media (max-width: 600px) {
+      .nc-row { grid-template-columns: 1fr; }
+    }
+
+    /* Empty / Loading */
+    .empty-state {
+      grid-column: 1 / -1; text-align: center;
+      padding: 52px 20px; color: var(--muted); font-size: 14px;
+    }
+    .loading-state { text-align: center; padding: 64px 20px; color: var(--muted); }
+    .spinner {
+      width: 32px; height: 32px; border: 3px solid var(--border);
+      border-top-color: var(--accent); border-radius: 50%;
+      margin: 0 auto 14px; animation: spin 0.8s linear infinite;
+    }
+
+    /* Toast */
+    .toast {
+      position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
+      background: #1c1c1c; color: white; padding: 11px 22px; border-radius: 24px;
+      font-size: 13px; font-weight: 500; z-index: 9999;
+      animation: toastIn 0.2s ease, toastOut 0.3s ease 1.9s forwards;
+      white-space: nowrap; box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+    }
+    @keyframes toastIn  { from { opacity:0; transform:translateX(-50%) translateY(8px); } to { opacity:1; transform:translateX(-50%) translateY(0); } }
+    @keyframes toastOut { to { opacity:0; } }
+
+    @media (max-width: 500px) {
+      .stats-row { padding: 12px 14px 10px; gap: 8px; }
+      .clients-grid { padding: 0 14px 28px; grid-template-columns: 1fr; gap: 10px; }
+      .section-group { padding: 0 14px; }
+      .alert-section, .setup-banner { margin-left: 14px; margin-right: 14px; }
+      .dash-grid-4 { grid-template-columns: repeat(2,1fr); }
+      .dash-grid-2 { grid-template-columns: 1fr; }
+      .dashboard { padding: 0 14px 28px; }
+    }
+
+    /* ── View toggle ── */
+    .view-toggle-btn {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); padding: 7px 14px;
+      cursor: pointer; font-size: 12px; color: var(--muted);
+      display: flex; align-items: center; gap: 5px;
+      transition: all 0.15s; font-weight: 500;
+    }
+    .view-toggle-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .view-toggle-btn.active { background: var(--accent); color: white; border-color: var(--accent); }
+
+    /* ── Dashboard ── */
+    .dashboard { padding: 0 18px 36px; display: none; }
+    .dash-section { margin-bottom: 22px; }
+    .dash-section-title {
+      font-size: 10px; font-weight: 700; color: var(--muted);
+      letter-spacing: 0.08em; text-transform: uppercase;
+      margin-bottom: 10px; padding-bottom: 6px;
+      border-bottom: 1px solid var(--border-light);
+    }
+    .dash-grid-4 { display: grid; grid-template-columns: repeat(4,1fr); gap: 10px; }
+    .dash-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .dash-stat-card {
+      background: var(--white); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 16px 14px;
+      text-align: center; box-shadow: var(--shadow-sm);
+    }
+    .dash-stat-icon { font-size: 20px; margin-bottom: 6px; }
+    .dash-stat-num { font-size: 32px; font-weight: 900; line-height: 1; letter-spacing: -1px; color: var(--text); }
+    .dash-stat-label { font-size: 10px; color: var(--muted); margin-top: 5px; font-weight: 600; }
+    .dash-table {
+      background: var(--white); border: 1px solid var(--border);
+      border-radius: var(--radius); overflow: hidden;
+    }
+    .dash-table-row {
+      display: flex; align-items: center;
+      padding: 9px 14px; border-bottom: 1px solid var(--border-light);
+      font-size: 13px; gap: 6px;
+    }
+    .dash-table-row:last-child { border-bottom: none; }
+    .dash-table-header {
+      background: var(--bg);
+      font-size: 10px; font-weight: 700; color: var(--muted);
+      letter-spacing: 0.05em; text-transform: uppercase; padding: 7px 14px;
+    }
+    .dash-tr-name { flex: 1.5; font-weight: 700; }
+    .dash-tr-cell { flex: 1; text-align: center; font-size: 12px; color: var(--muted); }
+    .dash-tr-cell.accent { color: var(--accent); font-weight: 700; }
+    .dash-tr-cell.red    { color: var(--red); font-weight: 700; }
+    .recent-lesson-list { display: flex; flex-direction: column; gap: 5px; }
+    .recent-lesson-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 9px 14px; background: var(--white);
+      border: 1px solid var(--border-light); border-radius: var(--radius-sm); font-size: 13px;
+    }
+    .rl-date { color: var(--muted); font-size: 11px; width: 110px; flex-shrink: 0; }
+    .rl-dog  { font-weight: 700; flex: 1; }
+    .rl-trainer { color: var(--muted); font-size: 11px; margin-right: 6px; }
+
+    /* Trainer pie row */
+    .trainer-pie-row { display: flex; gap: 14px; flex-wrap: wrap; }
+    .trainer-pie-card {
+      flex: 1; min-width: 220px;
+      background: var(--white); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 16px 18px;
+      box-shadow: var(--shadow-sm);
+    }
+    .trainer-pie-name { font-size: 15px; font-weight: 800; margin-bottom: 14px; }
+    .trainer-pie-body { display: flex; gap: 18px; align-items: center; }
+    .pie-legend { flex: 1; }
+    .pie-legend-item {
+      display: flex; align-items: center; gap: 7px;
+      margin-bottom: 7px; font-size: 12px;
+    }
+    .pie-legend-item:last-child { margin-bottom: 0; }
+    .pie-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+    .pie-legend-label { flex: 1; color: var(--text); }
+    .pie-legend-count { font-weight: 800; font-size: 13px; min-width: 32px; text-align: right; }
+    .pie-total { margin-top: 12px; font-size: 11px; color: var(--muted); text-align: right; font-weight: 500; }
+    .no-pie-data { font-size: 12px; color: var(--muted); font-style: italic; text-align: center; padding: 16px 0; }
+
+    /* Pie tooltip */
+    .pie-tooltip {
+      position: fixed; z-index: 9999; pointer-events: none;
+      background: #1c1c1c; color: white;
+      padding: 8px 13px; border-radius: 10px;
+      font-size: 13px; font-weight: 500; white-space: nowrap;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.28);
+      opacity: 0; transition: opacity 0.12s;
+      display: flex; align-items: center; gap: 7px;
+    }
+    .pie-tooltip.show { opacity: 1; }
+    .pie-tip-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+
+    /* Trainer profile cards */
+    .trainer-profiles {
+      display: flex; gap: 14px; margin-bottom: 22px; flex-wrap: wrap;
+    }
+    .trainer-profile-card {
+      flex: 1; min-width: 180px;
+      background: var(--white); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 20px 16px;
+      display: flex; align-items: center; gap: 16px;
+      box-shadow: var(--shadow-sm);
+    }
+    .trainer-avatar {
+      width: 64px; height: 64px; border-radius: 50%;
+      overflow: hidden; flex-shrink: 0; position: relative;
+      background: var(--bg); border: 2px solid var(--border);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .avatar-edit-btn {
+      position: absolute; bottom: 0; right: 0;
+      width: 22px; height: 22px; border-radius: 50%;
+      background: var(--accent); color: white;
+      border: 2px solid white; font-size: 10px;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      transition: transform 0.15s; z-index: 2; line-height: 1;
+    }
+    .avatar-edit-btn:hover { transform: scale(1.2); background: #2c6e57; }
+    .trainer-avatar img {
+      width: 100%; height: 100%; object-fit: cover;
+      display: block;
+    }
+    .trainer-avatar-placeholder {
+      font-size: 22px; font-weight: 900; color: var(--accent);
+      letter-spacing: -0.5px;
+    }
+    .trainer-profile-info { flex: 1; min-width: 0; }
+    .trainer-profile-name {
+      font-size: 17px; font-weight: 900; letter-spacing: -0.2px;
+      margin-bottom: 4px; color: var(--text);
+    }
+    .trainer-profile-title {
+      font-size: 11px; color: var(--muted); font-weight: 500; line-height: 1.5;
+    }
+    .trainer-profile-badge {
+      display: inline-block; margin-top: 6px;
+      padding: 2px 9px; border-radius: 8px;
+      font-size: 10px; font-weight: 700;
+    }
+    /* 職位標籤 — 可自由組合 */
+    .badge-senior   { background: #daeee6; color: #1b6a4a; }   /* 資深訓練師 Lv.4 */
+    .badge-kol      { background: #fff3e0; color: #b45309; }   /* KOL */
+    .badge-intern   { background: #f4e8f8; color: #6a1a7a; }   /* 實習訓練師 Lv.2 — 紫色 */
+    .badge-director { background: #d9eaf6; color: #1a4070; }   /* 主任 — 藍色 */
+    .badge-lv1      { background: #f5f3ee; color: #888480; }   /* 訓練助理 Lv.1 */
+    .badge-lv3      { background: #e6f2ec; color: #2d6a4f; }   /* 獨立訓練師 Lv.3 */
+
+    /* Date picker bar */
+    .dash-date-bar {
+      display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+      background: var(--white); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 12px 16px;
+      margin-bottom: 20px; box-shadow: var(--shadow-sm);
+    }
+    .dash-date-label { font-size: 12px; font-weight: 700; color: var(--muted); white-space: nowrap; }
+    .dash-date-input {
+      border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+      padding: 7px 12px; font-size: 14px; font-family: inherit;
+      outline: none; color: var(--text);
+    }
+    .dash-date-input:focus { border-color: var(--accent); }
+    .dash-date-hint { font-size: 11px; color: var(--muted); }
+    .period-card-clickable { cursor: pointer; transition: box-shadow 0.15s, transform 0.15s; }
+    .period-card-clickable:hover { box-shadow: 0 4px 18px rgba(0,0,0,0.10); transform: translateY(-2px); }
+    .period-card-hint { font-size: 10px; color: var(--muted); margin-top: 4px; letter-spacing: 0.03em; }
+    .breakdown-modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 600; align-items: flex-end; justify-content: center; }
+    .breakdown-modal-overlay.open { display: flex; animation: overlayFadeIn 0.28s ease; }
+    .breakdown-modal { background: var(--white); border-radius: var(--radius) var(--radius) 0 0; width: 100%; max-width: 560px; padding: 22px 20px 36px; max-height: 82vh; overflow-y: auto; animation: sheetSpring 0.44s cubic-bezier(0.32,0.72,0,1) both; }
+    .breakdown-modal-title { font-size: 16px; font-weight: 900; margin-bottom: 2px; }
+    .breakdown-modal-sub { font-size: 12px; color: var(--muted); margin-bottom: 16px; }
+    .breakdown-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .breakdown-table th { text-align: left; padding: 6px 8px; font-size: 11px; font-weight: 700; color: var(--muted); border-bottom: 1.5px solid var(--border); }
+    .breakdown-table td { padding: 8px 8px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+    .breakdown-table tr:last-child td { border-bottom: none; }
+    .breakdown-table tr:hover td { background: var(--bg); }
+    .breakdown-del-btn { background: none; border: none; cursor: pointer; font-size: 14px; padding: 2px 6px; border-radius: 6px; opacity: 0.4; transition: opacity 0.15s, background 0.15s; }
+    .breakdown-del-btn:hover { opacity: 1; background: #fee2e2; }
+    .breakdown-del-btn.loading { opacity: 0.3; pointer-events: none; }
+    .breakdown-sel-quick { font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 20px; border: 1.5px solid var(--border); background: var(--bg); color: var(--text); cursor: pointer; white-space: nowrap; }
+    .breakdown-sel-quick:hover { border-color: var(--accent); color: var(--accent); }
+    .breakdown-table td:first-child, .breakdown-table th:first-child { width: 28px; padding: 6px 4px; }
+    tr.bdr-selected td { background: #dbeafe !important; }
+    .breakdown-empty { text-align: center; padding: 28px; color: var(--muted); font-size: 13px; }
+    .dash-trainer-bar { display: flex; align-items: center; gap: 10px; padding: 8px 14px; background: var(--card); border-radius: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+    .dash-trainer-label { font-size: 12px; font-weight: 700; color: var(--muted); white-space: nowrap; }
+    .dash-trainer-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+    .dash-trainer-chip { padding: 4px 12px; border-radius: 20px; border: 1.5px solid var(--border); background: var(--bg); color: var(--text); font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.15s; }
+    .dash-trainer-chip:hover { border-color: var(--accent); color: var(--accent); }
+    .dash-trainer-chip.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+    /* Period stats */
+    .period-big {
+      display: flex; gap: 12px; margin-bottom: 14px;
+    }
+    .period-card {
+      flex: 1; background: var(--white); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 16px 14px;
+      text-align: center; box-shadow: var(--shadow-sm);
+    }
+    .period-card-num { font-size: 36px; font-weight: 900; color: var(--accent); line-height: 1; letter-spacing: -1px; }
+    .period-card-unit { font-size: 13px; color: var(--muted); margin-top: 2px; }
+    .period-card-label { font-size: 10px; color: var(--muted); margin-top: 6px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; }
+
+    /* Login */
+    .login-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.45); z-index: 9999;
+      align-items: center; justify-content: center;
+    }
+    .login-overlay.open { display: flex; }
+    .login-card {
+      background: var(--white); border-radius: 20px; padding: 40px 36px;
+      width: 340px; max-width: 92vw;
+      box-shadow: 0 24px 64px rgba(0,0,0,0.18);
+    }
+    .login-logo {
+      width: 54px; height: 54px; background: var(--accent); border-radius: 14px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px; font-weight: 900; color: white;
+      margin: 0 auto 18px;
+    }
+    .login-title { font-size: 20px; font-weight: 800; color: var(--text); text-align: center; }
+    .login-sub   { font-size: 13px; color: var(--muted); text-align: center; margin-top: 4px; margin-bottom: 28px; }
+    .login-input {
+      width: 100%; border: 1.5px solid var(--border); border-radius: 10px;
+      padding: 12px 14px; font-size: 14px; font-family: inherit; outline: none;
+      box-sizing: border-box; color: var(--text);
+    }
+    .login-input:focus { border-color: var(--accent); }
+    .login-error { font-size: 12px; color: #ef4444; min-height: 20px; margin: 8px 0 6px; }
+    .login-btn {
+      width: 100%; background: var(--accent); color: white; border: none;
+      border-radius: 10px; padding: 13px; font-size: 15px; font-weight: 700;
+      cursor: pointer; font-family: inherit; transition: background 0.15s;
+    }
+    .login-btn:hover { background: #2c6e57; }
+    /* User badge in header */
+    .user-badge {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 13px; font-weight: 600; color: var(--accent);
+      padding: 6px 12px; border: 1.5px solid var(--accent);
+      border-radius: 8px; cursor: default;
+    }
+    .user-avatar-mini {
+      width: 28px; height: 28px; border-radius: 50%; overflow: hidden;
+      background: var(--accent-light); border: 1.5px solid var(--accent);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px; font-weight: 900; color: var(--accent); flex-shrink: 0;
+    }
+    .user-avatar-mini img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .logout-btn {
+      font-size: 11px; color: var(--muted); background: none; border: none;
+      cursor: pointer; padding: 0; font-family: inherit;
+    }
+    .logout-btn:hover { color: #ef4444; }
+
+    /* ══════════════════════════════════════════
+       Apple-style refinements & animations
+    ══════════════════════════════════════════ */
+
+    /* Header — frosted glass */
+    .header {
+      background: rgba(237, 245, 249, 0.88);
+      backdrop-filter: blur(20px) saturate(1.8);
+      -webkit-backdrop-filter: blur(20px) saturate(1.8);
+    }
+
+    /* Logo micro-interaction */
+    .logo-mark { transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1); }
+    .logo-wrap:hover .logo-mark { transform: rotate(-6deg) scale(1.08); }
+
+    /* Stat cards entrance */
+    @keyframes statPop {
+      from { opacity: 0; transform: scale(0.88) translateY(8px); }
+      to   { opacity: 1; transform: scale(1) translateY(0); }
+    }
+    .stat-card { animation: statPop 0.45s cubic-bezier(0.34, 1.4, 0.64, 1) both; }
+    .stat-card:nth-child(1) { animation-delay: 0s; }
+    .stat-card:nth-child(2) { animation-delay: 0.06s; }
+    .stat-card:nth-child(3) { animation-delay: 0.12s; }
+
+    /* Client cards — stagger + hover lift */
+    @keyframes cardFadeUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .client-card {
+      animation: cardFadeUp 0.38s cubic-bezier(0.4, 0, 0.2, 1) both;
+      transition: box-shadow 0.28s ease, transform 0.28s ease;
+      will-change: transform;
+    }
+    .client-card:hover {
+      box-shadow: 0 10px 32px rgba(0,0,0,0.11), 0 2px 8px rgba(0,0,0,0.06);
+      transform: translateY(-3px);
+    }
+
+    /* Progress bars — scale animation + refined size */
+    .prog-track { height: 7px; border-radius: 4px; background: rgba(0,0,0,0.06); }
+    .prog-fill  { height: 100%; border-radius: 4px; transform-origin: left center;
+      animation: fillScale 0.8s cubic-bezier(0.22, 1, 0.36, 1) both; }
+    @keyframes fillScale {
+      from { transform: scaleX(0); }
+      to   { transform: scaleX(1); }
+    }
+
+    /* Urgent stripe pulse */
+    .card-urgent::before {
+      animation: stripePulse 2.4s ease-in-out infinite;
+    }
+    @keyframes stripePulse {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.45; }
+    }
+
+    /* Alert pulse dot */
+    .pulse-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--red); display: inline-block;
+      vertical-align: middle; flex-shrink: 0;
+      animation: pulseDot 1.6s ease-in-out infinite;
+    }
+    @keyframes pulseDot {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(192, 57, 43, 0.5); }
+      50%       { box-shadow: 0 0 0 6px rgba(192, 57, 43, 0); }
+    }
+
+    /* Modals — slide up with spring */
+    @keyframes overlayFadeIn {
+      from { background: rgba(0,0,0,0); }
+    }
+    @keyframes sheetSpring {
+      from { transform: translateY(52px); opacity: 0; }
+      to   { transform: translateY(0);    opacity: 1; }
+    }
+    .modal-overlay.open      { animation: overlayFadeIn 0.28s ease; }
+    .date-modal-overlay.open { animation: overlayFadeIn 0.28s ease; }
+    .modal-overlay.open .modal           { animation: sheetSpring 0.44s cubic-bezier(0.32, 0.72, 0, 1) both; }
+    .date-modal-overlay.open .date-modal { animation: sheetSpring 0.44s cubic-bezier(0.32, 0.72, 0, 1) both; }
+
+    /* Login card pop */
+    @keyframes cardPop {
+      from { transform: scale(0.9) translateY(10px); opacity: 0; }
+      to   { transform: scale(1) translateY(0);      opacity: 1; }
+    }
+    .login-overlay.open .login-card {
+      animation: cardPop 0.48s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+    }
+
+    /* View transition */
+    @keyframes viewFadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .view-entering { animation: viewFadeIn 0.35s cubic-bezier(0.4, 0, 0.2, 1) both; }
+
+    /* Action buttons */
+    .act-btn {
+      transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .act-btn:hover:not(:disabled):not(.loading) {
+      background: var(--accent); color: white; border-color: var(--accent);
+      transform: translateY(-1px);
+      box-shadow: 0 3px 10px rgba(46, 136, 197, 0.22);
+    }
+    .act-btn:active { transform: scale(0.94) !important; box-shadow: none !important; }
+
+    /* Tab pill active shadow */
+    .tab-btn { transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); }
+    .tab-btn.active { box-shadow: 0 2px 8px rgba(46, 136, 197, 0.22); }
+    .tab-btn:hover:not(.active) { transform: translateY(-1px); }
+
+    /* Trainer profile card hover */
+    .trainer-profile-card {
+      transition: box-shadow 0.28s ease, transform 0.28s ease;
+    }
+    .trainer-profile-card:hover {
+      box-shadow: 0 8px 24px rgba(0,0,0,0.09);
+      transform: translateY(-2px);
+    }
+
+    /* Toast — glass */
+    .toast {
+      backdrop-filter: blur(12px);
+      background: rgba(26, 45, 56, 0.90);
+      border: 1px solid rgba(255,255,255,0.10);
+    }
+    @keyframes toastIn  {
+      from { opacity: 0; transform: translateX(-50%) translateY(14px) scale(0.94); }
+      to   { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+    }
+
+    /* Primary btn hover */
+    .btn-primary { transition: background 0.2s, transform 0.15s, box-shadow 0.2s; }
+    .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(46, 136, 197, 0.25); }
+    .btn-primary:active { transform: scale(0.97); box-shadow: none; }
+
+    /* Refresh spin smoother */
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+
+<header class="header">
+  <div class="logo-wrap">
+    <div class="logo-mark">Z</div>
+    <div>
+      <div class="logo">ZEN PET</div><!-- v20260704 -->
+      <div class="logo-sub">客戶堂數追蹤</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <span class="last-updated" id="last-updated"></span>
+    <div class="user-badge" id="user-badge" style="display:none;">
+      <div class="user-avatar-mini" id="user-avatar-mini"></div>
+      <span id="user-name"></span>
+      <button class="logout-btn" onclick="logout()" title="登出">登出</button>
+    </div>
+    <button class="view-toggle-btn" id="view-toggle" onclick="toggleView()">📊 儀表板</button>
+    <button class="nc-add-btn" onclick="openNewClientModal()" title="新增客戶案例">＋ 新案例</button>
+    <button class="refresh-btn" id="cal-sync-btn" onclick="syncCalendar()" title="從各訓練師 Google 日曆拉取近30天上課紀錄">
+      <span class="icon">🗓</span> 同步日曆
+    </button>
+    <button class="refresh-btn" id="refresh-btn" onclick="loadData()">
+      <span class="icon">↻</span> 重新整理
+    </button>
+  </div>
+</header>
+
+<div id="setup-banner" class="setup-banner" style="display:none;">
+  <span>⚙️ <strong>示範模式</strong> — 目前顯示範例資料。連接 Google 試算表請將 <code>SCRIPT_URL</code> 替換為 Apps Script 部署網址。</span>
+  <span class="banner-close" onclick="this.parentElement.style.display='none'">✕</span>
+</div>
+
+<div class="stats-row">
+  <div class="stat-card">
+    <div class="stat-icon">🐾</div>
+    <div class="stat-num green" id="stat-active">—</div>
+    <div class="stat-label">進行中</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon">⚠️</div>
+    <div class="stat-num red" id="stat-urgent">—</div>
+    <div class="stat-label">需跟進</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon">👥</div>
+    <div class="stat-num" id="stat-total">—</div>
+    <div class="stat-label">全部客戶</div>
+  </div>
+</div>
+
+<div id="alert-section" class="alert-section" style="display:none;">
+  <div class="alert-header" style="display:flex;align-items:center;gap:7px;"><span class="pulse-dot"></span> 即將結課 — 請確認是否續課</div>
+  <div id="alert-list"></div>
+</div>
+
+<div id="pause-alert-section" class="alert-section" style="display:none;border-color:var(--yellow);background:rgba(251,191,36,0.06);">
+  <div class="alert-header" style="display:flex;align-items:center;gap:7px;color:var(--yellow);"><span class="pulse-dot" style="background:var(--yellow);"></span> 即將恢復課程 — 請記得聯繫飼主</div>
+  <div id="pause-alert-list"></div>
+</div>
+
+<div class="section-group">
+  <div class="tabs-scroll" id="trainer-tabs"></div>
+  <div class="status-scroll">
+    <button class="status-chip active" onclick="setStatus('all')" data-s="all">全部狀態</button>
+    <button class="status-chip" onclick="setStatus('進行中')" data-s="進行中">進行中</button>
+    <button class="status-chip" onclick="setStatus('暫停')" data-s="暫停">暫停</button>
+    <button class="status-chip" onclick="setStatus('結課')" data-s="結課">已結課</button>
+    <button class="status-chip" id="archive-toggle-btn" onclick="toggleArchived()" style="margin-left:8px;border-style:dashed;">顯示結課（0）</button>
+  </div>
+</div>
+
+<div id="loading-state" class="loading-state">
+  <div class="spinner"></div>
+  <div>載入中…</div>
+</div>
+<div id="clients-grid" class="clients-grid" style="display:none;"></div>
+<div id="dashboard" class="dashboard"></div>
+
+<!-- ── Date Confirm Modal ── -->
+<div class="date-modal-overlay" id="date-modal" onclick="closeDateModal(event)">
+  <div class="date-modal">
+    <div class="date-modal-title" id="date-modal-title">確認日期</div>
+    <div class="date-modal-sub" id="date-modal-sub">請選擇上課日期</div>
+    <input type="date" id="date-input" onchange="checkDupDate()">
+    <div style="margin-top:10px;">
+      <div style="font-size:12px;color:var(--muted);font-weight:600;margin-bottom:6px;">時間（選填）</div>
+      <input type="time" id="time-input" style="width:100%;border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:11px 14px;font-size:15px;font-family:inherit;outline:none;color:var(--text);">
+    </div>
+    <div id="date-dup-warning" style="display:none;margin-top:10px;background:#fff3cd;border:1.5px solid #f0a500;border-radius:8px;padding:10px 12px;">
+      <div style="font-size:12px;font-weight:800;color:#b45309;">⚠️ 這隻狗今天已有上課紀錄</div>
+      <div id="date-dup-detail" style="font-size:11px;color:#92400e;margin-top:3px;"></div>
+      <label style="display:flex;align-items:center;gap:6px;margin-top:8px;font-size:12px;font-weight:700;color:#b45309;cursor:pointer;">
+        <input type="checkbox" id="date-dup-confirm"> 我確定要新增（非重複按錯）
+      </label>
+    </div>
+    <div class="date-modal-btns">
+      <button class="btn-cancel" onclick="closeDateModal()">取消</button>
+      <button class="btn-primary" id="date-confirm-btn">確認登記</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Absence Modal ── -->
+<div class="date-modal-overlay" id="absence-modal" onclick="closeAbsenceModal(event)">
+  <div class="date-modal">
+    <div class="date-modal-title" id="absence-modal-title">登記請假</div>
+    <div class="date-modal-sub" id="absence-modal-sub">請選擇請假日期</div>
+    <input type="date" id="absence-date-input">
+    <div style="margin-top:10px;">
+      <div style="font-size:12px;color:var(--muted);font-weight:600;margin-bottom:6px;">原因（選填）</div>
+      <input type="text" id="absence-reason-input" placeholder="例：腳傷、出差、家庭因素…" style="width:100%;border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:11px 14px;font-size:15px;font-family:inherit;outline:none;color:var(--text);box-sizing:border-box;">
+    </div>
+    <div class="date-modal-btns">
+      <button class="btn-cancel" onclick="closeAbsenceModal()">取消</button>
+      <button class="btn-primary" id="absence-confirm-btn">確認請假</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Pause Modal ── -->
+<div class="date-modal-overlay" id="pause-modal" onclick="closePauseModal(event)">
+  <div class="date-modal">
+    <div class="date-modal-title">暫停課程</div>
+    <div class="date-modal-sub" id="pause-modal-sub">將刪除日曆上的剩餘課程，並標示為暫停</div>
+    <div style="font-size:12px;color:var(--muted);font-weight:600;margin-bottom:6px;">預計恢復日期</div>
+    <input type="date" id="pause-date-input">
+    <div class="date-modal-btns">
+      <button class="btn-cancel" onclick="closePauseModal()">取消</button>
+      <button class="btn-primary" id="pause-confirm-btn" style="background:var(--yellow);color:#000;">確認暫停</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── New Client Modal ── -->
+<div class="nc-overlay" id="nc-modal" onclick="closeNewClientModal(event)">
+  <div class="nc-modal">
+    <div class="nc-title">＋ 新增客戶案例</div>
+    <div class="nc-sub">填入編號後自動帶入已有資料；方案選定後自動填入堂數</div>
+
+    <!-- 編號 lookup -->
+    <div class="nc-group">
+      <div class="nc-group-title">客戶識別</div>
+      <div class="nc-row">
+        <div class="nc-field">
+          <label class="nc-label">編號 *</label>
+          <input class="nc-input" id="nc-id" type="text" placeholder="例：188" oninput="ncLookupById(this.value)">
+        </div>
+        <div class="nc-field">
+          <label class="nc-label">狗狗名字 *</label>
+          <input class="nc-input" id="nc-dog" type="text" placeholder="例：大海 Ocean">
+        </div>
+      </div>
+      <div class="nc-lookup-hint" id="nc-lookup-hint"></div>
+      <div class="nc-row">
+        <div class="nc-field">
+          <label class="nc-label">飼主姓名</label>
+          <input class="nc-input" id="nc-owner" type="text" placeholder="例：王小明">
+        </div>
+        <div class="nc-field">
+          <label class="nc-label">Email</label>
+          <input class="nc-input" id="nc-email" type="email" placeholder="example@mail.com">
+        </div>
+      </div>
+      <div class="nc-row full">
+        <div class="nc-field">
+          <label class="nc-label">地址（選填）</label>
+          <input class="nc-input" id="nc-address" type="text" placeholder="訓練地點或住家地址">
+        </div>
+      </div>
+    </div>
+
+    <!-- 課程方案 -->
+    <div class="nc-group">
+      <div class="nc-group-title">課程方案</div>
+      <div class="nc-row">
+        <div class="nc-field">
+          <label class="nc-label">方案 *</label>
+          <select class="nc-input" id="nc-plan" onchange="ncPlanChanged(this.value)">
+            <option value="">請選擇</option>
+            <option value="A方案">A 方案（6 堂）</option>
+            <option value="B方案">B 方案（20 堂）</option>
+            <option value="D方案">D 方案（自填）</option>
+            <option value="行為諮詢">行為諮詢</option>
+            <option value="其他">其他</option>
+          </select>
+        </div>
+        <div class="nc-field">
+          <label class="nc-label">週期／備註</label>
+          <input class="nc-input" id="nc-period" type="text" placeholder="例：每週一、三">
+        </div>
+      </div>
+      <div class="nc-row">
+        <div class="nc-field">
+          <label class="nc-label">上課總堂數</label>
+          <input class="nc-input" id="nc-class-total" type="number" min="0" placeholder="0">
+        </div>
+        <div class="nc-field">
+          <label class="nc-label">代訓總堂數（選填）</label>
+          <input class="nc-input" id="nc-train-total" type="number" min="0" placeholder="0">
+        </div>
+      </div>
+    </div>
+
+    <!-- 訓練師與時間 -->
+    <div class="nc-group">
+      <div class="nc-group-title">訓練師與開始日期</div>
+      <div class="nc-row">
+        <div class="nc-field">
+          <label class="nc-label">負責訓練師 *</label>
+          <select class="nc-input" id="nc-trainer">
+            <option value="">請選擇</option>
+            <option value="大廷 DaTing">大廷 DaTing</option>
+            <option value="羊桃 Sheepeach">羊桃 Sheepeach</option>
+            <option value="小褚 Henry">小褚 Henry</option>
+          </select>
+        </div>
+        <div class="nc-field">
+          <label class="nc-label">開始日期</label>
+          <input class="nc-input" id="nc-start-date" type="date">
+        </div>
+      </div>
+      <div class="nc-row full">
+        <div class="nc-field">
+          <label class="nc-label">備註</label>
+          <input class="nc-input" id="nc-notes" type="text" placeholder="任何補充說明">
+        </div>
+      </div>
+    </div>
+
+    <div class="nc-btns">
+      <button class="btn-cancel" onclick="closeNewClientModal()">取消</button>
+      <button class="btn-primary" id="nc-submit-btn" onclick="submitNewClient()">✓ 新增客戶</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Main Modal ── -->
+<div class="modal-overlay" id="modal" onclick="closeModal(event)">
+  <div class="modal">
+    <div class="modal-dog-name" id="modal-dog-name"></div>
+    <div class="modal-sub" id="modal-sub"></div>
+    <div id="modal-body"></div>
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeModal()">取消</button>
+      <button class="btn-primary" id="modal-confirm">儲存</button>
+    </div>
+  </div>
+</div>
+
+<div id="pie-tooltip" class="pie-tooltip"></div>
+
+<script>
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz2eP8mjcXra4TBr_UFeP6zea3CBByVATM3xXPG-bOoolfsB93bGf-7E-kZ_GxK8vKY/exec';
+
+const DEMO = [
+  {_row:2,  id:'112', dog:'大吉',      owner:'安安/0981832780',        plan:'B方案', period:'第1期', classTotal:20, classDone:16, classLeft:4,  trainTotal:10, trainDone:0,  trainLeft:10, trainer:'大廷', startDate:'2026/01/09', status:'暫停',  absences:[], notes:'住宿訓練 (好萌好猛寵物旅館)', lessonDates:[{date:'2026/04/15',type:'上課'},{date:'2026/04/22',type:'上課'},{date:'2026/05/02',type:'代訓'}]},
+  {_row:3,  id:'65',  dog:'Espo',     owner:'林蕙伶/0953864000',       plan:'B方案', period:'第2期', classTotal:20, classDone:14, classLeft:6,  trainTotal:10, trainDone:0,  trainLeft:10, trainer:'大廷', startDate:'2026/01/09', status:'暫停',  absences:[], notes:'腳傷休養 / 等場館', lessonDates:[{date:'2026/04/10',type:'上課'},{date:'2026/04/24',type:'上課'}]},
+  {_row:4,  id:'148', dog:'寶育',     owner:'禎Jan',                   plan:'B方案', period:'第1期', classTotal:20, classDone:11, classLeft:9,  trainTotal:10, trainDone:0,  trainLeft:10, trainer:'大廷', startDate:'2026/01/09', status:'進行中', absences:[], notes:'腳傷請假 / 一週一堂', lessonDates:[{date:'2026/05/15',type:'上課'},{date:'2026/05/22',type:'上課'},{date:'2026/06/05',type:'上課'}]},
+  {_row:5,  id:'176', dog:'Soda',     owner:'彭靖雁',                  plan:'B方案', period:'第1期', classTotal:20, classDone:17, classLeft:3,  trainTotal:10, trainDone:0,  trainLeft:10, trainer:'大廷', startDate:'2026/01/09', status:'進行中', absences:[], notes:'', lessonDates:[{date:'2026/06/10',type:'上課'},{date:'2026/06/17',type:'上課'},{date:'2026/06/24',type:'上課'}]},
+  {_row:6,  id:'189', dog:'王大海',   owner:'王郁婷',                  plan:'B方案', period:'第1期', classTotal:20, classDone:4,  classLeft:16, trainTotal:10, trainDone:0,  trainLeft:10, trainer:'大廷', startDate:'2026/01/09', status:'進行中', absences:['2026/05/20'], notes:'配合排班 (空姐)', lessonDates:[{date:'2026/05/06',type:'上課'},{date:'2026/05/13',type:'上課'}]},
+  {_row:7,  id:'184', dog:'絨寶寶',   owner:'verafang0822',            plan:'B方案', period:'第1期', classTotal:20, classDone:3,  classLeft:17, trainTotal:10, trainDone:0,  trainLeft:10, trainer:'大廷', startDate:'2026/01/09', status:'進行中', absences:['2026/04/26','2026/05/10'], notes:'配合保母 - 小咪', lessonDates:[{date:'2026/04/19',type:'上課'},{date:'2026/06/01',type:'上課'}]},
+  {_row:8,  id:'151', dog:'饅頭',     owner:'shih-bei.gu',             plan:'A方案', period:'第1期', classTotal:6,  classDone:2,  classLeft:4,  trainTotal:0,  trainDone:0,  trainLeft:0,  trainer:'大廷', startDate:'2026/04/01', status:'進行中', absences:[], notes:'每兩週一堂', lessonDates:[{date:'2026/04/08',type:'上課'},{date:'2026/04/22',type:'上課'}]},
+  {_row:9,  id:'152', dog:'Mizu 咪祖',owner:'林可筑',                  plan:'D方案', period:'第2期', classTotal:4,  classDone:3,  classLeft:1,  trainTotal:0,  trainDone:0,  trainLeft:0,  trainer:'大廷', startDate:'2026/04/01', status:'進行中', absences:[], notes:'嘉義實體救援', lessonDates:[{date:'2026/04/08',type:'上課'},{date:'2026/05/13',type:'上課'},{date:'2026/06/17',type:'上課'}]},
+  {_row:10, id:'201', dog:'奶茶',     owner:'黃美玲/0912345678',       plan:'A方案', period:'第1期', classTotal:6,  classDone:5,  classLeft:1,  trainTotal:0,  trainDone:0,  trainLeft:0,  trainer:'羊桃', startDate:'2026/04/15', status:'進行中', absences:[], notes:'', lessonDates:[{date:'2026/04/22',type:'上課'},{date:'2026/05/06',type:'上課'},{date:'2026/06/03',type:'上課'},{date:'2026/06/17',type:'上課'},{date:'2026/06/24',type:'上課'}]},
+  {_row:11, id:'207', dog:'QQ',       owner:'陳佳佳',                  plan:'B方案', period:'第1期', classTotal:20, classDone:8,  classLeft:12, trainTotal:10, trainDone:2,  trainLeft:8,  trainer:'羊桃', startDate:'2026/03/01', status:'進行中', absences:[], notes:'', lessonDates:[{date:'2026/05/05',type:'上課'},{date:'2026/06/02',type:'代訓'},{date:'2026/06/16',type:'代訓'}]},
+  {_row:12, id:'195', dog:'豆豆',     owner:'李大明/0988888888',       plan:'B方案', period:'第1期', classTotal:20, classDone:20, classLeft:0,  trainTotal:10, trainDone:10, trainLeft:0,  trainer:'羊桃', startDate:'2025/12/01', status:'已結課', absences:[], notes:'', lessonDates:[{date:'2026/05/26',type:'上課'},{date:'2026/06/01',type:'上課'}]},
+];
+
+let allClients = [], activeTrainer = 'all', activeStatus = 'all', currentView = 'list', dashDate = '', showArchived = false, dashTrainer = 'all';
+let _dashViewLessons = [], _dashYm = '', _dashWeek = {}, _lastBreakdownPeriod = 'month';
+let _selectedLessons = {}; // logRow → {logRow, clientRow, type}
+const isDemo = (SCRIPT_URL === 'YOUR_APPS_SCRIPT_URL_HERE');
+
+function calcEndDate(startDate, plan) {
+  if (!startDate) return '';
+  const p = String(plan || '');
+  const months = p.includes('B') ? 4 : p.includes('A') ? 2 : 0;
+  if (!months) return '';
+  const parts = startDate.split('/');
+  if (parts.length < 3) return '';
+  const d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+  d.setMonth(d.getMonth() + months);
+  return `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function parsePauseUntil(notes) {
+  const m = String(notes || '').match(/【暫停至(\d{4}\/\d{2}\/\d{2})】/);
+  return m ? m[1] : '';
+}
+
+// ── 允許使用者清單（email → { name, role }）──────────────────
+const ALLOWED_USERS = {
+  'whisperer0812@gmail.com': { name: '大廷', role: '管理員' },
+  'ale03302328@gmail.com':   { name: '家俊', role: '管理員' },
+  'sheepeach1227@gmail.com': { name: '羊桃', role: '訪客'  },
+  '23.59oxo@gmail.com':      { name: '小褚', role: '訪客'  },
+};
+const ADMIN_EMAIL = 'whisperer0812@gmail.com';
+
+let currentUser = null;
+
+function initAuth() {
+  const saved = localStorage.getItem('zenpet_user');
+  if (saved) {
+    const info = ALLOWED_USERS[saved];
+    if (info) {
+      currentUser = { email: saved, ...info };
+      showUserBadge();
+      startApp();
+      return;
+    }
+  }
+  document.getElementById('login-overlay').classList.add('open');
+  setTimeout(() => document.getElementById('login-email')?.focus(), 100);
+}
+
+function doLogin() {
+  const email = (document.getElementById('login-email').value || '').trim().toLowerCase();
+  const errEl = document.getElementById('login-error');
+  const info   = ALLOWED_USERS[email];
+  if (!info) {
+    errEl.innerHTML = `此信箱無使用權限，請發信至<br><a href="mailto:${ADMIN_EMAIL}" style="color:var(--accent)">${ADMIN_EMAIL}</a> 申請。`;
+    return;
+  }
+  errEl.textContent = '';
+  localStorage.setItem('zenpet_user', email);
+  currentUser = { email, ...info };
+  document.getElementById('login-overlay').classList.remove('open');
+  showUserBadge();
+  startApp();
+}
+
+function logout() {
+  if (!confirm(`確定要登出「${currentUser?.name || ''}」？`)) return;
+  localStorage.removeItem('zenpet_user');
+  location.reload();
+}
+
+function showUserBadge() {
+  const badge  = document.getElementById('user-badge');
+  const name   = document.getElementById('user-name');
+  const avatar = document.getElementById('user-avatar-mini');
+  if (badge) badge.style.display = 'flex';
+  if (!currentUser) return;
+  if (name) {
+    const roleStyle = currentUser.role === '管理員'
+      ? 'color:#1a4070;background:#d9eaf6;'
+      : 'color:#6a1a7a;background:#f4e8f8;';
+    const ti = TRAINERS_INFO.find(t => t.name === currentUser.name);
+    const enName = ti?.englishName ? ` <span style="font-weight:400;font-size:11px;color:#999;">${ti.englishName}</span>` : '';
+    name.innerHTML = `${currentUser.name}${enName} <span style="font-size:10px;font-weight:700;padding:2px 6px;border-radius:6px;${roleStyle}">${currentUser.role}</span>`;
+  }
+  if (avatar) {
+    const photo = localStorage.getItem(`zenpet_photo_${currentUser.name}`);
+    if (photo) {
+      avatar.innerHTML = `<img src="${photo}" alt="${currentUser.name}">`;
+    } else {
+      avatar.innerHTML = currentUser.name.charAt(0);
+    }
+  }
+}
+
+function startApp() {
+  loadPhotos();
+  if (isDemo) {
+    document.getElementById('setup-banner').style.display = 'flex';
+    allClients = JSON.parse(JSON.stringify(DEMO));
+    renderAll();
+  } else {
+    loadData();
+  }
+}
+
+// ── 大頭照：讀取 / 權限 / 上傳 ───────────────────────────────
+function loadPhotos() {
+  TRAINERS_INFO.forEach(t => {
+    const saved = localStorage.getItem(`zenpet_photo_${t.name}`);
+    if (saved) t.photo = saved;
+  });
+}
+
+function canEditPhoto(trainerName) {
+  if (!currentUser) return false;
+  if (currentUser.role === '管理員') return true;
+  return currentUser.name === trainerName;
+}
+
+let photoUploadTarget = null;
+
+function triggerPhotoUpload(name) {
+  photoUploadTarget = name;
+  const inp = document.getElementById('photo-upload-input');
+  inp.value = '';
+  inp.click();
+}
+
+async function handlePhotoUpload() {
+  const inp  = document.getElementById('photo-upload-input');
+  const file = inp.files[0];
+  if (!file || !photoUploadTarget) return;
+  const dataUrl = await compressImage(file, 300);
+  localStorage.setItem(`zenpet_photo_${photoUploadTarget}`, dataUrl);
+  const t = TRAINERS_INFO.find(x => x.name === photoUploadTarget);
+  if (t) t.photo = dataUrl;
+  const wasCurrentUser = photoUploadTarget === currentUser?.name;
+  photoUploadTarget = null;
+  if (wasCurrentUser) showUserBadge();
+  renderDashboard();
+}
+
+function compressImage(file, maxPx) {
+  return new Promise(resolve => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const img = new Image();
+      img.onload = () => {
+        const ratio  = Math.min(maxPx / img.width, maxPx / img.height, 1);
+        const canvas = document.createElement('canvas');
+        canvas.width  = img.width  * ratio;
+        canvas.height = img.height * ratio;
+        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL('image/jpeg', 0.85));
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+window.addEventListener('DOMContentLoaded', initAuth);
+
+async function syncCalendar() {
+  if (isDemo) { showToast('Demo 模式不支援日曆同步'); return; }
+  const btn = document.getElementById('cal-sync-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="icon" style="animation:spin 0.7s linear infinite;display:inline-block">↻</span> 同步中…';
+  try {
+    const json = await fetch(SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'syncCalendar' })
+    }).then(r => r.json());
+    if (!json.success) throw new Error(json.error);
+    const n = json.synced || 0;
+    showToast(n > 0 ? `✓ 從日曆同步了 ${n} 筆上課紀錄` : '日曆同步完成，無新紀錄');
+    if (n > 0) loadData();
+  } catch (err) {
+    showToast(`⚠️ 日曆同步失敗：${err.message}`);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<span class="icon">🗓</span> 同步日曆';
+  }
+}
+
+async function clearAndResync(btn) {
+  if (isDemo) { showToast('Demo 模式不支援此功能'); return; }
+  const confirmed = confirm('⚠️ 警告！\n\n這個操作會：\n1. 清除上課紀錄分頁的所有資料\n2. 從三位訓練師的 Google 日曆重新建立\n3. 重新計算每位客戶的已上 / 剩餘堂數\n\n請確認要繼續？');
+  if (!confirmed) return;
+  const startDate = prompt('從哪個日期開始同步？（格式：YYYY/MM/DD）', '2024/01/01');
+  if (!startDate) return;
+  const orig = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = '重建中… 請稍候';
+  try {
+    const json = await fetch(SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'clearAndResync', startDate })
+    }).then(r => r.json());
+    if (!json.success) throw new Error(json.error);
+    showToast(`✓ 重建完成！共 ${json.synced} 筆紀錄，更新 ${json.clients} 位客戶堂數`);
+    loadData();
+  } catch (err) {
+    showToast(`⚠️ 重建失敗：${err.message}`);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = orig;
+  }
+}
+
+async function fixCounts(btn) {
+  if (isDemo) { showToast('Demo 模式不支援此功能'); return; }
+  if (!confirm('從上課紀錄重新計算所有客戶堂數？\n（不會刪除任何紀錄，只重新計算數字）')) return;
+  const orig = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = '計算中…';
+  try {
+    const json = await fetch(SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'fixCounts' })
+    }).then(r => r.json());
+    if (!json.success) throw new Error(json.error);
+    showToast(`✓ 重新計算完成，更新 ${json.clients} 位客戶`);
+    loadData();
+  } catch (err) {
+    showToast(`⚠️ 計算失敗：${err.message}`);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = orig;
+  }
+}
+
+// ── New Client Modal ──────────────────────────────────────────
+const PLAN_DEFAULTS = { 'A方案': 6, 'B方案': 20 };
+
+function openNewClientModal() {
+  // Reset form
+  ['nc-id','nc-dog','nc-owner','nc-email','nc-address','nc-period','nc-notes'].forEach(id => {
+    document.getElementById(id).value = '';
+    document.getElementById(id).classList.remove('filled');
+  });
+  document.getElementById('nc-plan').value = '';
+  document.getElementById('nc-trainer').value = '';
+  document.getElementById('nc-class-total').value = '';
+  document.getElementById('nc-train-total').value = '';
+  document.getElementById('nc-start-date').value = '';
+  document.getElementById('nc-lookup-hint').className = 'nc-lookup-hint';
+  document.getElementById('nc-lookup-hint').textContent = '';
+  document.getElementById('nc-submit-btn').disabled = false;
+  document.getElementById('nc-submit-btn').textContent = '✓ 新增客戶';
+  document.getElementById('nc-modal').classList.add('open');
+}
+
+function closeNewClientModal(e) {
+  if (e && e.target !== document.getElementById('nc-modal')) return;
+  document.getElementById('nc-modal').classList.remove('open');
+}
+
+let _ncLookupTimer = null;
+function ncLookupById(val) {
+  clearTimeout(_ncLookupTimer);
+  _ncLookupTimer = setTimeout(() => {
+    const hint = document.getElementById('nc-lookup-hint');
+    const v = val.trim();
+    if (!v) { hint.className = 'nc-lookup-hint'; return; }
+
+    // Search existing clients by ID
+    const matches = allClients.filter(c => c.id === v);
+    if (matches.length === 0) { hint.className = 'nc-lookup-hint'; return; }
+
+    const c = matches[matches.length - 1]; // most recent if duplicates
+    hint.className = 'nc-lookup-hint show';
+    hint.innerHTML = `找到現有客戶：<strong>${esc(c.dog)}</strong>（飼主：${esc(c.owner||'—')}）
+      <button onclick="ncAutoFill()" style="margin-left:10px;background:var(--accent);color:#fff;border:none;border-radius:6px;padding:3px 10px;font-size:11px;font-weight:700;cursor:pointer;">自動填入</button>`;
+    hint._client = c;
+  }, 300);
+}
+
+function ncAutoFill() {
+  const hint = document.getElementById('nc-lookup-hint');
+  const c = hint._client;
+  if (!c) return;
+  const fill = (id, val) => {
+    const el = document.getElementById(id);
+    el.value = val || '';
+    if (val) el.classList.add('filled'); else el.classList.remove('filled');
+  };
+  fill('nc-dog',     c.dog);
+  fill('nc-owner',   c.owner);
+  fill('nc-email',   c.email);
+  fill('nc-address', c.address);
+  if (c.trainer) document.getElementById('nc-trainer').value = c.trainer;
+  hint.innerHTML = hint.innerHTML.replace(/<button.*<\/button>/, '✓ 已自動填入');
+}
+
+function ncPlanChanged(plan) {
+  const def = PLAN_DEFAULTS[plan];
+  if (def !== undefined) document.getElementById('nc-class-total').value = def;
+}
+
+async function submitNewClient() {
+  if (isDemo) { showToast('Demo 模式不支援新增客戶'); return; }
+  const get = id => document.getElementById(id).value.trim();
+
+  const id      = get('nc-id');
+  const dog     = get('nc-dog');
+  const trainer = get('nc-trainer');
+  if (!id)      { showToast('請填入編號'); return; }
+  if (!dog)     { showToast('請填入狗狗名字'); return; }
+  if (!trainer) { showToast('請選擇負責訓練師'); return; }
+
+  const btn = document.getElementById('nc-submit-btn');
+  btn.disabled = true;
+  btn.textContent = '新增中…';
+
+  try {
+    const json = await fetch(SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify({
+        action:     'addClient',
+        id,
+        dog,
+        owner:      get('nc-owner'),
+        email:      get('nc-email'),
+        address:    get('nc-address'),
+        plan:       get('nc-plan'),
+        period:     get('nc-period'),
+        classTotal: Number(get('nc-class-total')) || 0,
+        trainTotal: Number(get('nc-train-total')) || 0,
+        trainer,
+        startDate:  get('nc-start-date').replaceAll('-', '/'),
+        notes:      get('nc-notes'),
+      })
+    }).then(r => r.json());
+
+    if (!json.success) throw new Error(json.error);
+    showToast(`✓ ${dog} 已新增！`);
+    document.getElementById('nc-modal').classList.remove('open');
+    loadData();
+  } catch (err) {
+    showToast(`⚠️ 新增失敗：${err.message}`);
+    btn.disabled = false;
+    btn.textContent = '✓ 新增客戶';
+  }
+}
+
+async function loadData() {
+  const btn = document.getElementById('refresh-btn');
+  btn.classList.add('spinning');
+  document.getElementById('loading-state').style.display = 'block';
+  document.getElementById('clients-grid').style.display  = 'none';
+  try {
+    const res  = await fetch(SCRIPT_URL);
+    const json = await res.json();
+    if (!json.success) throw new Error(json.error);
+    allClients = json.data;
+    renderAll();
+    document.getElementById('last-updated').textContent =
+      '更新：' + new Date().toLocaleTimeString('zh-Hant', {hour:'2-digit', minute:'2-digit'});
+  } catch (err) {
+    document.getElementById('loading-state').innerHTML =
+      `<div style="color:var(--red);padding:20px">⚠️ 載入失敗：${err.message}</div>`;
+  } finally {
+    btn.classList.remove('spinning');
+  }
+}
+
+function renderAll() {
+  document.getElementById('loading-state').style.display = 'none';
+  renderStats();
+  if (currentView === 'dashboard') {
+    document.getElementById('clients-grid').style.display = 'none';
+    document.querySelector('.section-group').style.display = 'none';
+    const as = document.getElementById('alert-section'); if (as) as.style.display = 'none';
+    document.getElementById('dashboard').style.display = 'block';
+    renderDashboard();
+  } else {
+    document.getElementById('clients-grid').style.display = 'grid';
+    document.querySelector('.section-group').style.display = '';
+    document.getElementById('dashboard').style.display = 'none';
+    renderAlerts(); renderTrainerTabs(); renderClients();
+  }
+}
+
+function countUp(el, target, duration = 650) {
+  const start = Date.now();
+  const run = () => {
+    const p = Math.min((Date.now() - start) / duration, 1);
+    const eased = 1 - Math.pow(1 - p, 3);
+    el.textContent = Math.round(eased * target);
+    if (p < 1) requestAnimationFrame(run);
+    else el.textContent = target;
+  };
+  requestAnimationFrame(run);
+}
+
+function renderStats() {
+  const active = allClients.filter(c => c.status === '進行中').length;
+  const urgent = allClients.filter(c => c.status === '進行中' && c.classLeft > 0 && c.classLeft <= 2 && c.classTotal > 0).length;
+  countUp(document.getElementById('stat-active'), active);
+  countUp(document.getElementById('stat-urgent'), urgent);
+  countUp(document.getElementById('stat-total'),  allClients.length);
+}
+
+function renderAlerts() {
+  const urgent = allClients
+    .filter(c => c.status === '進行中' && c.classLeft > 0 && c.classLeft <= 2 && c.classTotal > 0)
+    .sort((a,b) => a.classLeft - b.classLeft);
+  const sec = document.getElementById('alert-section');
+  if (!urgent.length) { sec.style.display = 'none'; } else {
+    sec.style.display = 'block';
+    document.getElementById('alert-list').innerHTML = urgent.map(c => {
+      const owner = (c.owner||'').split('/')[0].trim();
+      return `<div class="alert-item" onclick="openModal(${c._row})">
+        <span><span class="alert-dog">${esc(c.dog)}</span><span class="alert-meta">${esc(owner)} · ${esc(c.trainer)}</span></span>
+        <span class="remaining-badge rb-red">剩 ${c.classLeft} 堂</span>
+      </div>`;
+    }).join('');
+  }
+
+  // Pause resume alerts (within 7 days)
+  const today = new Date(); today.setHours(0,0,0,0);
+  const in7   = new Date(today.getTime() + 7 * 86400000);
+  const resuming = allClients.filter(c => {
+    if (c.status !== '暫停') return false;
+    const pu = parsePauseUntil(c.notes);
+    if (!pu) return false;
+    const parts = pu.split('/');
+    const d = new Date(parseInt(parts[0]), parseInt(parts[1])-1, parseInt(parts[2]));
+    return d >= today && d <= in7;
+  });
+  const pauseSec = document.getElementById('pause-alert-section');
+  if (!resuming.length) { if (pauseSec) pauseSec.style.display = 'none'; return; }
+  if (pauseSec) {
+    pauseSec.style.display = 'block';
+    document.getElementById('pause-alert-list').innerHTML = resuming.map(c => {
+      const owner = (c.owner||'').split('/')[0].trim();
+      const pu = parsePauseUntil(c.notes);
+      return `<div class="alert-item" onclick="openModal(${c._row})">
+        <span><span class="alert-dog">${esc(c.dog)}</span><span class="alert-meta">${esc(owner)} · ${esc(c.trainer)}</span></span>
+        <span class="remaining-badge rb-yellow">恢復：${esc(pu)}</span>
+      </div>`;
+    }).join('');
+  }
+}
+
+function renderTrainerTabs() {
+  const dataTrainers = [...new Set(allClients.map(c=>c.trainer).filter(Boolean))];
+  // 只保留實際有客戶資料的訓練師，依 TRAINERS_INFO 順序排列
+  dataTrainers.sort((a,b) => {
+    const ai = TRAINERS_INFO.findIndex(t => a.includes(t.name));
+    const bi = TRAINERS_INFO.findIndex(t => b.includes(t.name));
+    if (ai !== -1 && bi !== -1) return ai - bi;
+    if (ai !== -1) return -1;
+    if (bi !== -1) return 1;
+    return a.localeCompare(b);
+  });
+  document.getElementById('trainer-tabs').innerHTML = [
+    `<button class="tab-btn ${activeTrainer==='all'?'active':''}" onclick="setTrainer('all')">全部<span class="tab-count">${allClients.length}</span></button>`,
+    ...dataTrainers.map(t => {
+      const cnt = allClients.filter(c=>c.trainer===t).length;
+      return `<button class="tab-btn ${activeTrainer===t?'active':''}" onclick="setTrainer('${esc(t)}')">${esc(t)}<span class="tab-count">${cnt}</span></button>`;
+    })
+  ].join('');
+}
+
+function renderClients() {
+  let list = allClients.slice();
+  if (activeTrainer !== 'all') list = list.filter(c => c.trainer === activeTrainer);
+  if (activeStatus  !== 'all') {
+    if (activeStatus === '結課') list = list.filter(c => c.status === '已結課' || c.classLeft === 0);
+    else list = list.filter(c => c.status === activeStatus);
+  }
+  // Hide archived ('已結課') by default unless showArchived is on or user explicitly filtered to '結課'
+  if (!showArchived && activeStatus !== '結課') {
+    list = list.filter(c => c.status !== '已結課');
+  }
+  const order = {'進行中':0,'暫停':1,'已結課':2};
+  list.sort((a,b) => {
+    const sa = order[a.status]??1, sb = order[b.status]??1;
+    if (sa !== sb) return sa - sb;
+    if (sa === 0)  return a.classLeft - b.classLeft;
+    return 0;
+  });
+  const grid = document.getElementById('clients-grid');
+  grid.innerHTML = list.length ? list.map((c, i) => renderCard(c, i)).join('') : '<div class="empty-state">沒有符合條件的客戶</div>';
+  // Update archive toggle button label
+  const archivedCount = allClients.filter(c => c.status === '已結課').length;
+  const btn = document.getElementById('archive-toggle-btn');
+  if (btn) btn.textContent = showArchived ? `隱藏結課（${archivedCount}）` : `顯示結課（${archivedCount}）`;
+}
+
+function renderCard(c, idx = 0) {
+  const owner   = (c.owner||'').split('/')[0].trim();
+  const phone   = (c.owner||'').includes('/') ? (c.owner||'').split('/')[1]?.trim() : '';
+  const isConsult = (c.plan||'').includes('行為諮詢') || (c.plan||'').includes('諮詢');
+  const consultDone = isConsult && (c.classDone >= 1 || c.status === '已結課');
+  const urgent  = !isConsult && c.status === '進行中' && c.classLeft > 0 && c.classLeft <= 2 && c.classTotal > 0;
+  const warning = !isConsult && c.status === '進行中' && c.classLeft <= 4 && c.classLeft > 2 && c.classTotal > 0;
+  const done    = consultDone || c.status === '已結課' || (c.classLeft === 0 && c.classTotal > 0);
+  const paused  = c.status === '暫停';
+
+  const cardCls   = isConsult && !consultDone ? 'card-ok card-consult'
+    : urgent ? 'card-urgent' : warning ? 'card-warning' : paused ? 'card-paused' : done ? 'card-done' : 'card-ok';
+  const planKey   = isConsult ? '諮' : (c.plan||'').match(/[ABD]/)?.[0] || 'other';
+  const planBadge = `<span class="badge badge-plan-${planKey}">${esc(c.plan||'—')}</span>`;
+  const statusBadge = isConsult
+    ? (consultDone ? '<span class="badge-consult-done">已完成</span>' : '<span class="badge-consult-pending">待諮詢</span>')
+    : paused ? '<span class="badge badge-paused">暫停</span>'
+    : done ? '<span class="badge badge-done">結課</span>'
+    : '<span class="badge badge-active">進行中</span>';
+
+  const classPct = c.classTotal > 0 ? Math.min(100, Math.round(c.classDone/c.classTotal*100)) : 0;
+  const trainPct = c.trainTotal > 0 ? Math.min(100, Math.round(c.trainDone/c.trainTotal*100)) : 0;
+  const fillCls  = urgent ? 'pf-red' : warning ? 'pf-yellow' : done ? 'pf-done' : 'pf-green';
+  const rbCls    = urgent ? 'rb-red' : warning ? 'rb-yellow' : done ? 'rb-done' : 'rb-green';
+  const rbText   = done ? '結課' : `剩 ${c.classLeft} 堂`;
+
+  // Combined progress — 分母用 classTotal（方案上限），代訓是從中分配，不另外加總
+  const totalDone   = c.classDone + c.trainDone;
+  const totalTotal  = c.classTotal;
+  const combinedPct = totalTotal > 0 ? Math.min(100, Math.round(totalDone / totalTotal * 100)) : 0;
+  const rbText2     = done ? '結課' : `剩 ${c.classLeft} 堂`;
+  const breakdown   = c.trainTotal > 0
+    ? `上課 ${c.classDone} 堂 &nbsp;|&nbsp; 代訓 ${c.trainDone} 堂`
+    : `上課 ${c.classDone} 堂`;
+
+  // Contract date range
+  const endDate  = calcEndDate(c.startDate, c.plan);
+  const dateRange = c.startDate ? (endDate ? `${c.startDate} → ${endDate}` : c.startDate) : '';
+
+  const dates      = (c.lessonDates||[]).filter(d=>d.date).sort((a,b)=>b.date.localeCompare(a.date));
+  const lastLesson = dates[0];
+
+  const footerRows = [];
+  if (lastLesson) footerRows.push(`<div class="info-row">📅 最後上課：<span class="last-lesson-hl">${esc(lastLesson.date)}${lastLesson.time ? ' ' + esc(lastLesson.time) : ''}</span></div>`);
+  if (c.address)  footerRows.push(`<div class="info-row">📍 <a class="map-link" href="https://maps.google.com/?q=${encodeURIComponent(c.address)}" target="_blank" onclick="event.stopPropagation()">${esc(c.address)}</a></div>`);
+  if (c.notes)    footerRows.push(`<div class="info-row">📝 ${esc(c.notes)}</div>`);
+  if (c.absences?.length) footerRows.push(`<div class="info-row">🗓 請假：${c.absences.map(a=>esc(a)).join(' · ')}</div>`);
+
+  const canClass = !done;
+  const canTrain = !done && c.trainTotal > 0 && c.trainLeft > 0;
+  const actions  = [];
+  if (isConsult && !consultDone) {
+    actions.push(`<button class="act-btn" onclick="confirmDate(${c._row},'class',this)">✓ 完成諮詢</button>`);
+  } else {
+    if (canClass) actions.push(`<button class="act-btn" onclick="confirmDate(${c._row},'class',this)">＋ 上課</button>`);
+    if (canTrain) actions.push(`<button class="act-btn" onclick="confirmDate(${c._row},'train',this)">＋ 代訓</button>`);
+    if (!done) actions.push(`<button class="act-btn act-btn-absence" onclick="confirmAbsence(${c._row},this)">＋ 請假</button>`);
+  }
+  actions.push(`<button class="act-btn-sm" onclick="openModal(${c._row})">⋯</button>`);
+
+  const delay = (Math.min(idx, 7) * 0.045).toFixed(3);
+  return `<div class="client-card ${cardCls}" id="card-${c._row}" style="animation-delay:${delay}s">
+    <div class="card-header">
+      <div class="card-info">
+        <div class="dog-name">${c.id ? `<span class="client-id">#${esc(c.id)}</span>` : ''}${esc(c.dog)}</div>
+        <div class="owner-line">${esc(owner)}${phone ? ` · ${esc(phone)}` : ''}</div>
+        <div class="meta-line">
+          <span>${esc(c.trainer)}</span>
+          ${c.period ? `<span class="meta-dot">·</span><span>${esc(c.period)}</span>` : ''}
+          ${dateRange ? `<span class="meta-dot">·</span><span>${esc(dateRange)}</span>` : ''}
+        </div>
+      </div>
+      <div class="card-badges">${planBadge}${statusBadge}</div>
+    </div>
+    ${isConsult ? `
+    <div class="card-progress">
+      <div class="consult-status-row">
+        <span class="prog-label">行為諮詢</span>
+        ${consultDone
+          ? `<span class="consult-check">✓ 已完成</span>`
+          : `<span class="consult-pending-txt">尚未進行</span>`}
+      </div>
+      ${consultDone && lastLesson ? `<div class="consult-date">📅 ${esc(lastLesson.date)}${lastLesson.time ? ' ' + esc(lastLesson.time) : ''}</div>` : ''}
+    </div>` : `
+    <div class="card-progress">
+      <div class="prog-row">
+        <div class="prog-top">
+          <span class="prog-label">總進度</span>
+          <div class="prog-right">
+            <span class="prog-count">${totalDone} / ${totalTotal || '—'}</span>
+            <span class="remaining-badge ${rbCls}">${rbText2}</span>
+          </div>
+        </div>
+        <div class="prog-track"><div class="prog-fill ${fillCls}" style="width:${combinedPct}%"></div></div>
+      </div>
+      <div class="prog-breakdown">${breakdown}</div>
+    </div>`}
+    ${footerRows.length ? `<div class="card-footer-info">${footerRows.join('')}</div>` : ''}
+    <div class="card-actions">${actions.join('')}</div>
+  </div>`;
+}
+
+// ── Date confirm ───────────────────────────────────────────────
+let pendingRow = null, pendingType = null, pendingBtn = null;
+
+function checkDupDate() {
+  const raw = document.getElementById('date-input').value;
+  const warn = document.getElementById('date-dup-warning');
+  const detail = document.getElementById('date-dup-detail');
+  const cb = document.getElementById('date-dup-confirm');
+  if (!raw || !pendingRow) { warn.style.display = 'none'; return; }
+  const date = raw.replaceAll('-', '/');
+  const c = allClients.find(x => x._row === pendingRow);
+  const dups = (c?.lessonDates || []).filter(l => l.date === date);
+  if (dups.length > 0) {
+    detail.textContent = `已有 ${dups.length} 筆：${dups.map(l => l.type || '上課').join('、')}`;
+    cb.checked = false;
+    warn.style.display = 'block';
+  } else {
+    warn.style.display = 'none';
+  }
+}
+
+function confirmDate(rowIndex, type, btn) {
+  const c = allClients.find(x => x._row === rowIndex);
+  if (!c) return;
+  pendingRow = rowIndex; pendingType = type; pendingBtn = btn;
+  const label = type === 'class' ? '上課' : '代訓';
+  document.getElementById('date-modal-title').textContent = `登記${label} — ${c.dog}`;
+  document.getElementById('date-modal-sub').textContent   = `請選擇這次${label}的日期`;
+  document.getElementById('date-input').value             = todayStr();
+  document.getElementById('date-dup-warning').style.display = 'none';
+  document.getElementById('date-dup-confirm').checked = false;
+  document.getElementById('date-confirm-btn').onclick     = doAddSession;
+  document.getElementById('date-modal').classList.add('open');
+  checkDupDate();
+}
+
+async function doAddSession() {
+  const raw  = document.getElementById('date-input').value;
+  const time = document.getElementById('time-input').value || '';
+  if (!raw) { showToast('請選擇日期'); return; }
+  const date = raw.replaceAll('-', '/');
+
+  // duplicate guard
+  const warn = document.getElementById('date-dup-warning');
+  const cb   = document.getElementById('date-dup-confirm');
+  if (warn.style.display !== 'none' && !cb.checked) {
+    showToast('⚠️ 請先勾選確認，再登記重複日期');
+    return;
+  }
+
+  closeDateModal();
+
+  const rowIndex = pendingRow, type = pendingType, btn = pendingBtn;
+  if (btn) btn.classList.add('loading');
+  const label = type === 'class' ? '上課' : '代訓';
+  const c = allClients.find(x => x._row === rowIndex);
+  const toastMsg = time ? `✓ ${label} +1（${date} ${time}）` : `✓ ${label} +1（${date}）`;
+
+  if (isDemo) {
+    await sleep(350);
+    if (c) {
+      if (type === 'class') { c.classDone++; c.classLeft = Math.max(0, c.classLeft - 1); }
+      else                  { c.trainDone++; c.trainLeft = Math.max(0, c.trainLeft - 1); }
+      if (!c.lessonDates) c.lessonDates = [];
+      c.lessonDates.push({ date, time, type: label });
+    }
+    if (btn) { btn.classList.remove('loading'); btn.classList.add('success'); }
+    setTimeout(() => { if (btn) btn.classList.remove('success'); renderAll(); }, 700);
+    showToast(toastMsg);
+    return;
+  }
+
+  try {
+    const payload = { action: type === 'class' ? 'addClass' : 'addTraining',
+      rowIndex, date, time, id: c?.id, dog: c?.dog, trainer: c?.trainer, owner: c?.owner, plan: c?.plan };
+    const json = await fetch(SCRIPT_URL, {method:'POST', body:JSON.stringify(payload)}).then(r=>r.json());
+    if (!json.success) throw new Error(json.error);
+    if (c) {
+      if (type === 'class') { c.classDone++; c.classLeft = Math.max(0, c.classLeft - 1); }
+      else                  { c.trainDone++; c.trainLeft = Math.max(0, c.trainLeft - 1); }
+      if (!c.lessonDates) c.lessonDates = [];
+      c.lessonDates.push({ date, time, type: label });
+    }
+    if (btn) btn.classList.add('success');
+    setTimeout(() => { if (btn) btn.classList.remove('success'); renderAll(); }, 700);
+    showToast(toastMsg + '（已同步）');
+  } catch (err) {
+    showToast(`⚠️ ${err.message}`);
+  } finally {
+    if (btn) btn.classList.remove('loading');
+  }
+}
+
+function closeDateModal(e) {
+  if (e && e.target !== document.getElementById('date-modal')) return;
+  document.getElementById('date-modal').classList.remove('open');
+}
+
+// ── Absence Modal ───────────────────────────────────────────────
+let absenceRow = null, absenceBtn = null;
+
+function confirmAbsence(rowIndex, btn) {
+  const c = allClients.find(x => x._row === rowIndex);
+  if (!c) return;
+  if ((c.absences||[]).length >= 4) { showToast('請假最多記錄 4 筆'); return; }
+  absenceRow = rowIndex; absenceBtn = btn;
+  document.getElementById('absence-modal-title').textContent = `登記請假 — ${c.dog}`;
+  document.getElementById('absence-modal-sub').textContent   = `${(c.owner||'').split('/')[0].trim()} · ${c.trainer}`;
+  document.getElementById('absence-date-input').value        = todayStr();
+  document.getElementById('absence-reason-input').value      = '';
+  document.getElementById('absence-confirm-btn').onclick     = doAddAbsence;
+  document.getElementById('absence-modal').classList.add('open');
+  setTimeout(() => document.getElementById('absence-date-input').focus(), 100);
+}
+
+function closeAbsenceModal(e) {
+  if (e && e.target !== document.getElementById('absence-modal')) return;
+  document.getElementById('absence-modal').classList.remove('open');
+}
+
+async function doAddAbsence() {
+  const raw    = document.getElementById('absence-date-input').value;
+  const reason = document.getElementById('absence-reason-input').value.trim();
+  if (!raw) { showToast('請選擇請假日期'); return; }
+  const date = raw.replaceAll('-', '/');
+  closeAbsenceModal();
+
+  const rowIndex = absenceRow, btn = absenceBtn;
+  const c = allClients.find(x => x._row === rowIndex);
+  if (!c) return;
+  if (btn) btn.classList.add('loading');
+
+  if (isDemo) {
+    await sleep(300);
+    if (!c.absences) c.absences = [];
+    c.absences.push(date);
+    if (reason) c.notes = c.notes ? c.notes + ' / 請假：' + reason : '請假：' + reason;
+    showToast(`✓ 已登記請假（${date}）${reason ? '：' + reason : ''}`);
+    if (btn) btn.classList.remove('loading');
+    renderAll();
+    return;
+  }
+
+  try {
+    const json = await fetch(SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'addAbsence', rowIndex, date, reason })
+    }).then(r => r.json());
+    if (!json.success) throw new Error(json.error);
+    if (!c.absences) c.absences = [];
+    c.absences.push(date);
+    showToast(`✓ 已登記請假（${date}）${reason ? '：' + reason : ''}（已同步）`);
+    if (btn) btn.classList.add('success');
+    setTimeout(() => { if (btn) { btn.classList.remove('loading'); btn.classList.remove('success'); } renderAll(); }, 700);
+  } catch (err) {
+    showToast(`⚠️ ${err.message}`);
+    if (btn) btn.classList.remove('loading');
+  }
+}
+
+// ── Main modal ─────────────────────────────────────────────────
+let modalRow = null;
+
+function openModal(rowIndex) {
+  modalRow = rowIndex;
+  const c = allClients.find(x => x._row === rowIndex);
+  if (!c) return;
+  const owner = (c.owner||'').split('/')[0].trim();
+  document.getElementById('modal-dog-name').textContent = c.dog;
+  document.getElementById('modal-sub').textContent = `${owner} · ${c.trainer}${c.period ? ' · ' + c.period : ''}`;
+
+  const lessonItems  = (c.lessonDates||[]).filter(d=>d.date).map(d=>({...d, source:'lesson'}));
+  const absenceItems = (c.absences||[]).filter(d=>d).map(d=>({ date:d, time:'', type:'請假', source:'absence' }));
+  const allItems = [...lessonItems, ...absenceItems].sort((a,b)=>b.date.localeCompare(a.date));
+  const realCount  = lessonItems.filter(l=>l.type!=='不可抗力因素').length;
+  const forceCount = lessonItems.filter(l=>l.type==='不可抗力因素').length;
+
+  const lessonListHtml = allItems.length
+    ? `<div class="lesson-list">${allItems.map(d => {
+        if (d.source === 'absence') {
+          return `<div class="lesson-item">
+            <input type="date" class="lesson-edit-date" data-orig="${esc(d.date)}" data-source="absence" value="${d.date.replace(/\//g,'-')}">
+            <span style="flex:1"></span>
+            <span class="lesson-type-badge lt-absence">請假</span>
+          </div>`;
+        }
+        if (d.type === '不可抗力因素') {
+          return `<div class="lesson-item">
+            <input type="date" class="lesson-edit-date" data-orig="${esc(d.date)}" data-source="lesson" value="${d.date.replace(/\//g,'-')}">
+            <input class="lesson-edit-reason" value="${esc(d.time||'')}" placeholder="原因（選填）">
+            <input type="hidden" class="lesson-edit-type" value="不可抗力因素">
+            <span class="lesson-type-badge lt-force">不可抗力</span>
+          </div>`;
+        }
+        return `<div class="lesson-item">
+          <input type="date" class="lesson-edit-date" data-orig="${esc(d.date)}" data-source="lesson" value="${d.date.replace(/\//g,'-')}">
+          <input type="time" class="lesson-edit-time" value="${esc(d.time||'')}" placeholder="時間">
+          <select class="lesson-edit-type">
+            <option value="上課" ${d.type!=='代訓'?'selected':''}>上課</option>
+            <option value="代訓" ${d.type==='代訓'?'selected':''}>代訓</option>
+          </select>
+        </div>`;
+      }).join('')}</div>`
+    : `<div class="no-lessons">尚無紀錄</div>`;
+
+  document.getElementById('modal-body').innerHTML = `
+    <div class="modal-section">
+      <div class="modal-section-title">更新資訊</div>
+      <div class="modal-field">
+        <div class="modal-label">狀態</div>
+        <select id="modal-status">
+          <option value="進行中" ${c.status==='進行中'?'selected':''}>進行中</option>
+          <option value="暫停"   ${c.status==='暫停'?'selected':''}>暫停</option>
+          <option value="已結課" ${c.status==='已結課'?'selected':''}>已結課</option>
+        </select>
+      </div>
+      <div class="modal-field">
+        <div class="modal-label">備註</div>
+        <textarea id="modal-notes" rows="3">${esc(c.notes||'')}</textarea>
+      </div>
+      <div class="modal-field">
+        <div class="modal-label">訓練地址</div>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <input type="text" id="modal-address" value="${esc(c.address||'')}" placeholder="輸入地址，可直接開啟 Google Maps" style="flex:1;border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:9px 12px;font-size:14px;font-family:inherit;outline:none;color:var(--text);">
+          ${c.address ? `<a href="https://maps.google.com/?q=${encodeURIComponent(c.address)}" target="_blank" style="font-size:20px;text-decoration:none;" title="開啟 Google Maps">📍</a>` : ''}
+        </div>
+      </div>
+    </div>
+    <div class="modal-section">
+      <div class="modal-section-title">課程紀錄（${realCount} 堂 · ${absenceItems.length} 請假${forceCount ? ' · ' + forceCount + ' 不可抗力' : ''}）</div>
+      ${lessonListHtml}
+      <div class="manual-add-row">
+        <input type="date" id="manual-lesson-date" value="${todayStr()}">
+        <input type="time" id="manual-lesson-time" placeholder="時間（選填）">
+        <select id="manual-lesson-type" onchange="onLessonTypeChange(this)">
+          <option value="上課">上課</option>
+          <option value="代訓">代訓</option>
+          <option value="請假">請假</option>
+          <option value="不可抗力因素">不可抗力因素</option>
+        </select>
+        <button class="btn-add-lesson" onclick="addManualLesson(${rowIndex})">＋ 新增</button>
+      </div>
+      <div class="force-reason-wrap" id="force-reason-wrap">
+        <input type="text" id="manual-force-reason" placeholder="請說明不可抗力因素原因（選填）">
+      </div>
+    </div>`;
+
+  // Append pause/archive quick actions
+  const isAdmin = currentUser && currentUser.role === '管理員';
+  if (isAdmin) {
+    const puTag = parsePauseUntil(c.notes);
+    const pauseLabel = c.status === '暫停' ? `繼續課程` : `暫停課程`;
+    const pauseAction = c.status === '暫停'
+      ? `onclick="resumeClient(${c._row})"`
+      : `onclick="openPauseModal(${c._row})"`;
+    const archiveDisabled = c.status === '已結課' ? 'disabled style="opacity:.45;"' : '';
+    document.getElementById('modal-body').insertAdjacentHTML('beforeend', `
+      <div class="modal-section" style="border-top:1px solid var(--border);padding-top:12px;margin-top:4px;">
+        <div class="modal-section-title">快速動作</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="act-btn act-btn-absence" style="font-size:13px;" ${pauseAction}>⏸ ${pauseLabel}</button>
+          <button class="act-btn" style="font-size:13px;background:var(--muted);color:#fff;" ${archiveDisabled} onclick="archiveClient(${c._row})">📁 封存（已結課）</button>
+        </div>
+        ${puTag ? `<div style="font-size:12px;color:var(--muted);margin-top:6px;">暫停至 ${esc(puTag)}</div>` : ''}
+      </div>`);
+  }
+
+  document.getElementById('modal-confirm').onclick = saveModal;
+  document.getElementById('modal').classList.add('open');
+}
+
+async function saveModal() {
+  const c      = allClients.find(x => x._row === modalRow);
+  const status = document.getElementById('modal-status').value;
+  const notes  = document.getElementById('modal-notes').value;
+
+  // Collect edits from the unified lesson/absence list
+  const lessonEdits = [], absenceEdits = [];
+  document.querySelectorAll('#modal-body .lesson-edit-date').forEach(inp => {
+    const origDate = inp.dataset.orig;
+    const source   = inp.dataset.source;
+    const newDate  = inp.value.replace(/-/g, '/');
+    const row      = inp.closest('.lesson-item');
+    if (source === 'absence') {
+      if (newDate !== origDate)
+        absenceEdits.push({ origDate, newDate });
+    } else {
+      const newTime = (row.querySelector('.lesson-edit-reason') || row.querySelector('.lesson-edit-time'))?.value || '';
+      const newType = row.querySelector('.lesson-edit-type')?.value;
+      const orig    = (c.lessonDates||[]).find(l => l.date === origDate);
+      if (orig && (newDate !== origDate || newTime !== (orig.time||'') || newType !== orig.type))
+        lessonEdits.push({ origDate, newDate, newTime, newType });
+    }
+  });
+
+  closeModal();
+
+  if (isDemo) {
+    if (c) {
+      c.status = status; c.notes = notes; c.address = address;
+      lessonEdits.forEach(e => {
+        const l = (c.lessonDates||[]).find(l => l.date === e.origDate);
+        if (l) { l.date = e.newDate; l.time = e.newTime; l.type = e.newType; }
+      });
+      absenceEdits.forEach(e => {
+        const idx = (c.absences||[]).indexOf(e.origDate);
+        if (idx !== -1) c.absences[idx] = e.newDate;
+      });
+    }
+    renderAll(); showToast('已更新（示範模式）'); return;
+  }
+
+  const address = document.getElementById('modal-address')?.value || '';
+  const tasks = [];
+  if (status  !== c.status)   tasks.push({ action:'updateStatus',  rowIndex:modalRow, status });
+  if (notes   !== c.notes)    tasks.push({ action:'updateNotes',   rowIndex:modalRow, notes });
+  if (address !== (c.address||'')) tasks.push({ action:'updateAddress', rowIndex:modalRow, address });
+  lessonEdits.forEach(e => tasks.push({
+    action:'updateLessonDate', id:c.id, dog:c.dog,
+    origDate:e.origDate, newDate:e.newDate, newTime:e.newTime, newType:e.newType
+  }));
+  absenceEdits.forEach(e => tasks.push({
+    action:'updateAbsenceDate', rowIndex:modalRow, origDate:e.origDate, newDate:e.newDate
+  }));
+  try {
+    await Promise.all(tasks.map(t =>
+      fetch(SCRIPT_URL, {method:'POST', body:JSON.stringify(t)}).then(r=>r.json())
+    ));
+    if (c) {
+      c.status = status; c.notes = notes; c.address = address;
+      lessonEdits.forEach(e => {
+        const l = (c.lessonDates||[]).find(l => l.date === e.origDate);
+        if (l) { l.date = e.newDate; l.time = e.newTime; l.type = e.newType; }
+      });
+      absenceEdits.forEach(e => {
+        const idx = (c.absences||[]).indexOf(e.origDate);
+        if (idx !== -1) c.absences[idx] = e.newDate;
+      });
+    }
+    renderAll(); showToast('✓ 已同步到試算表');
+  } catch (err) { showToast(`⚠️ ${err.message}`); }
+}
+
+function closeModal(e) {
+  if (e && e.target !== document.getElementById('modal')) return;
+  document.getElementById('modal').classList.remove('open');
+}
+
+// ── Archive (封存) ─────────────────────────────────────────────
+async function archiveClient(rowIndex) {
+  const c = allClients.find(x => x._row === rowIndex);
+  if (!c) return;
+  if (!confirm(`確定要封存「${c.dog}」的課程？\n狀態將設為「已結課」，可隨時透過「顯示結課」找回。`)) return;
+  closeModal();
+  if (isDemo) { if (c) c.status = '已結課'; renderAll(); showToast('已封存（示範模式）'); return; }
+  try {
+    await fetch(SCRIPT_URL, { method:'POST', body: JSON.stringify({ action:'archiveClient', rowIndex }) }).then(r=>r.json());
+    if (c) c.status = '已結課';
+    renderAll(); showToast(`✓ 已封存 ${c.dog}（已結課）`);
+  } catch (err) { showToast(`⚠️ ${err.message}`); }
+}
+
+// ── Pause (暫停) ───────────────────────────────────────────────
+let pauseRow = null;
+function openPauseModal(rowIndex) {
+  const c = allClients.find(x => x._row === rowIndex);
+  if (!c) return;
+  pauseRow = rowIndex;
+  closeModal();
+  document.getElementById('pause-modal-sub').textContent = `${c.dog} — 將刪除日曆剩餘課程並標示為暫停`;
+  const d = new Date(); d.setMonth(d.getMonth() + 1);
+  document.getElementById('pause-date-input').value = d.toISOString().slice(0, 10);
+  document.getElementById('pause-confirm-btn').onclick = doPauseClient;
+  document.getElementById('pause-modal').classList.add('open');
+}
+
+function closePauseModal(e) {
+  if (e && e.target !== document.getElementById('pause-modal')) return;
+  document.getElementById('pause-modal').classList.remove('open');
+}
+
+async function doPauseClient() {
+  const raw = document.getElementById('pause-date-input').value;
+  if (!raw) { showToast('請選擇恢復日期'); return; }
+  const pauseUntil = raw.replaceAll('-', '/');
+  closePauseModal();
+  const c = allClients.find(x => x._row === pauseRow);
+  if (isDemo) {
+    if (c) { c.status = '暫停'; c.notes = (c.notes ? c.notes + ' / ' : '') + `【暫停至${pauseUntil}】`; }
+    renderAll(); showToast(`已暫停（示範模式）`); return;
+  }
+  try {
+    await fetch(SCRIPT_URL, { method:'POST', body: JSON.stringify({
+      action:'pauseClient', rowIndex: pauseRow, pauseUntil,
+      id: c?.id, dog: c?.dog, trainer: c?.trainer
+    }) }).then(r=>r.json());
+    if (c) {
+      c.status = '暫停';
+      const cur = (c.notes||'').replace(/【暫停至[^】]*】\s*\/?\s*/g,'').trim().replace(/\s*\/\s*$/,'');
+      c.notes = cur ? cur + ` / 【暫停至${pauseUntil}】` : `【暫停至${pauseUntil}】`;
+    }
+    renderAll(); showToast(`✓ 已暫停 ${c?.dog}，預計恢復 ${pauseUntil}`);
+  } catch (err) { showToast(`⚠️ ${err.message}`); }
+}
+
+async function resumeClient(rowIndex) {
+  const c = allClients.find(x => x._row === rowIndex);
+  if (!c) return;
+  closeModal();
+  if (isDemo) { if (c) { c.status = '進行中'; c.notes = (c.notes||'').replace(/【暫停至[^】]*】\s*\/?\s*/g,'').trim(); } renderAll(); showToast('已恢復（示範模式）'); return; }
+  try {
+    await fetch(SCRIPT_URL, { method:'POST', body: JSON.stringify({ action:'updateStatus', rowIndex, status:'進行中' }) }).then(r=>r.json());
+    if (c) { c.status = '進行中'; c.notes = (c.notes||'').replace(/【暫停至[^】]*】\s*\/?\s*/g,'').trim(); }
+    renderAll(); showToast(`✓ 已恢復 ${c?.dog} 課程`);
+  } catch (err) { showToast(`⚠️ ${err.message}`); }
+}
+
+// ── Archive toggle ─────────────────────────────────────────────
+function toggleArchived() {
+  showArchived = !showArchived;
+  renderClients();
+}
+
+async function addManualLesson(rowIndex) {
+  const raw  = document.getElementById('manual-lesson-date').value;
+  const time = document.getElementById('manual-lesson-time').value || '';
+  const type = document.getElementById('manual-lesson-type').value;
+  if (!raw) { showToast('請選擇日期'); return; }
+  const date = raw.replaceAll('-', '/');
+  const c = allClients.find(x => x._row === rowIndex);
+  if (!c) return;
+
+  const btn = document.querySelector('.btn-add-lesson');
+  if (btn) { btn.textContent = '新增中…'; btn.disabled = true; }
+
+  if (type === '請假') {
+    if (isDemo) {
+      await sleep(300);
+      if (!c.absences) c.absences = [];
+      if (c.absences.length >= 4) { showToast('請假最多記錄 4 筆'); if (btn) { btn.textContent='＋ 新增'; btn.disabled=false; } return; }
+      c.absences.push(date);
+      showToast(`✓ 已新增請假（${date}）`);
+      openModal(rowIndex);
+      return;
+    }
+    try {
+      const json = await fetch(SCRIPT_URL, { method:'POST', body: JSON.stringify({ action:'addAbsence', rowIndex, date }) }).then(r=>r.json());
+      if (!json.success) throw new Error(json.error);
+      if (!c.absences) c.absences = [];
+      c.absences.push(date);
+      showToast(`✓ 已新增請假（${date}）`);
+      openModal(rowIndex);
+    } catch (err) { showToast(`⚠️ ${err.message}`); if (btn) { btn.textContent='＋ 新增'; btn.disabled=false; } }
+    return;
+  }
+
+  if (type === '不可抗力因素') {
+    const reason = document.getElementById('manual-force-reason')?.value || '';
+    const toastMsg = `✓ 已新增不可抗力因素（${date}）`;
+    if (isDemo) {
+      await sleep(300);
+      if (!c.lessonDates) c.lessonDates = [];
+      c.lessonDates.push({ date, time: reason, type: '不可抗力因素' });
+      showToast(toastMsg);
+      openModal(rowIndex);
+      return;
+    }
+    try {
+      const payload = { action:'addLessonDate', id:c.id, dog:c.dog, date, time:reason, lessonType:'不可抗力因素', trainer:c.trainer, owner:c.owner, plan:c.plan };
+      const json = await fetch(SCRIPT_URL, { method:'POST', body: JSON.stringify(payload) }).then(r=>r.json());
+      if (!json.success) throw new Error(json.error);
+      if (!c.lessonDates) c.lessonDates = [];
+      c.lessonDates.push({ date, time: reason, type: '不可抗力因素' });
+      showToast(toastMsg);
+      openModal(rowIndex);
+    } catch (err) { showToast(`⚠️ ${err.message}`); if (btn) { btn.textContent='＋ 新增'; btn.disabled=false; } }
+    return;
+  }
+
+  const toastMsg = `✓ 已新增 ${type}（${date}${time ? ' ' + time : ''}）`;
+
+  if (isDemo) {
+    await sleep(300);
+    if (!c.lessonDates) c.lessonDates = [];
+    c.lessonDates.push({ date, time, type });
+    showToast(toastMsg);
+    openModal(rowIndex);
+    return;
+  }
+
+  try {
+    const payload = { action: 'addLessonDate', id: c.id, dog: c.dog, date, time, lessonType: type, trainer: c.trainer, owner: c.owner, plan: c.plan };
+    const json = await fetch(SCRIPT_URL, { method:'POST', body: JSON.stringify(payload) }).then(r=>r.json());
+    if (!json.success) throw new Error(json.error);
+    if (!c.lessonDates) c.lessonDates = [];
+    c.lessonDates.push({ date, time, type });
+    showToast(toastMsg);
+    openModal(rowIndex);
+  } catch (err) {
+    showToast(`⚠️ ${err.message}`);
+    if (btn) { btn.textContent = '＋ 新增'; btn.disabled = false; }
+  }
+}
+
+function onLessonTypeChange(sel) {
+  const isForce = sel.value === '不可抗力因素';
+  const isAbsence = sel.value === '請假';
+  const wrap  = document.getElementById('force-reason-wrap');
+  const timeI = document.getElementById('manual-lesson-time');
+  if (wrap)  wrap.style.display  = isForce ? 'block' : 'none';
+  if (timeI) timeI.style.display = (isForce || isAbsence) ? 'none' : '';
+}
+
+function setTrainer(t) { activeTrainer = t; renderTrainerTabs(); renderClients(); }
+
+function setStatus(s) {
+  activeStatus = s;
+  document.querySelectorAll('.status-chip').forEach(b => b.classList.toggle('active', b.dataset.s === s));
+  renderClients();
+}
+
+function todayStr() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function showToast(msg) {
+  document.querySelectorAll('.toast').forEach(t => t.remove());
+  const t = document.createElement('div');
+  t.className = 'toast'; t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 2500);
+}
+
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+function toggleView() {
+  currentView = currentView === 'list' ? 'dashboard' : 'list';
+  const btn  = document.getElementById('view-toggle');
+  const grid = document.getElementById('clients-grid');
+  const dash = document.getElementById('dashboard');
+  if (currentView === 'dashboard') {
+    btn.textContent = '📋 客戶列表'; btn.classList.add('active');
+  } else {
+    btn.textContent = '📊 儀表板'; btn.classList.remove('active');
+  }
+  if (allClients.length) {
+    renderAll();
+    const target = currentView === 'dashboard' ? dash : grid;
+    target.classList.remove('view-entering');
+    requestAnimationFrame(() => requestAnimationFrame(() => target.classList.add('view-entering')));
+  }
+}
+
+const TRAINERS_INFO = [
+  {
+    name: '大廷',
+    englishName: 'DaTing',
+    title: '訓練部主任／資深訓練師',
+    badges: [{ label: '主任', cls: 'badge-director' }, { label: '資深訓練師', cls: 'badge-senior' }],
+    photo: '',
+    initial: '廷',
+  },
+  {
+    name: '羊桃',
+    englishName: 'Sheepeach',
+    title: '資深訓練師／KOL',
+    badges: [{ label: '資深訓練師', cls: 'badge-senior' }, { label: 'KOL', cls: 'badge-kol' }],
+    photo: '',
+    initial: '桃',
+  },
+  {
+    name: '小褚',
+    englishName: 'Henry',
+    title: '實習訓練師／KOL',
+    badges: [{ label: '實習訓練師', cls: 'badge-intern' }, { label: 'KOL', cls: 'badge-kol' }],
+    photo: '',
+    initial: '褚',
+  },
+];
+
+const PLAN_COLORS = {
+  'A方案':   '#52b788',
+  'B方案':   '#3b82f6',
+  'C方案':   '#f59e0b',
+  'D方案':   '#a855f7',
+  '行為諮詢': '#ef4444',
+  '到府保母': '#14b8a6',
+  '其他':    '#9ca3af',
+};
+const PLAN_ORDER = ['A方案','B方案','C方案','D方案','行為諮詢','到府保母','其他'];
+
+function getPlanKey(plan) {
+  const p = String(plan || '');
+  if (/^A/.test(p)) return 'A方案';
+  if (/^B/.test(p)) return 'B方案';
+  if (/^C/.test(p) || p.includes('狗明星')) return 'C方案';
+  if (/^D/.test(p)) return 'D方案';
+  if (p.includes('行為') || p.includes('諮詢')) return '行為諮詢';
+  if (p.includes('保母') || p.includes('到府')) return '到府保母';
+  return '其他';
+}
+
+function makePieSVG(slices) {
+  const total = slices.reduce((s,d) => s + d.count, 0);
+  if (!total) return null;
+  const cx = 60, cy = 60, r = 52;
+  let angle = -90;
+  const paths = slices.filter(s => s.count > 0).map(s => {
+    const sweep = (s.count / total) * 360;
+    const pct   = Math.round(s.count / total * 100);
+    const attrs = `data-label="${esc(s.label)}" data-count="${s.count}" data-pct="${pct}" data-color="${s.color}"
+      onmouseenter="showPieTip(event,this)" onmousemove="movePieTip(event)" onmouseleave="hidePieTip()"
+      style="cursor:pointer;transition:opacity 0.1s;" onmousedown="" `;
+    if (sweep >= 359.9) {
+      angle += sweep;
+      return `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${s.color}" ${attrs}/>`;
+    }
+    const a1 = angle * Math.PI / 180, a2 = (angle + sweep) * Math.PI / 180;
+    const x1 = cx + r * Math.cos(a1), y1 = cy + r * Math.sin(a1);
+    const x2 = cx + r * Math.cos(a2), y2 = cy + r * Math.sin(a2);
+    const large = sweep > 180 ? 1 : 0;
+    angle += sweep;
+    return `<path d="M${cx} ${cy} L${x1.toFixed(1)} ${y1.toFixed(1)} A${r} ${r} 0 ${large} 1 ${x2.toFixed(1)} ${y2.toFixed(1)}Z"
+      fill="${s.color}" stroke="white" stroke-width="1.5" ${attrs}/>`;
+  });
+  return `<svg viewBox="0 0 120 120" width="110" height="110" style="flex-shrink:0;overflow:visible;">${paths.join('')}</svg>`;
+}
+
+function showPieTip(e, el) {
+  const tip = document.getElementById('pie-tooltip');
+  if (!tip) return;
+  tip.innerHTML = `<span class="pie-tip-dot" style="background:${el.dataset.color}"></span>${el.dataset.label}：${el.dataset.count} 堂（${el.dataset.pct}%）`;
+  tip.classList.add('show');
+  movePieTip(e);
+}
+function movePieTip(e) {
+  const tip = document.getElementById('pie-tooltip');
+  if (!tip) return;
+  const x = e.clientX + 14, y = e.clientY - 42;
+  tip.style.left = x + 'px';
+  tip.style.top  = y + 'px';
+}
+function hidePieTip() {
+  const tip = document.getElementById('pie-tooltip');
+  if (tip) tip.classList.remove('show');
+}
+
+function onDashDateChange(val) {
+  dashDate = val || todayStr();
+  renderDashboard();
+}
+
+function setDashTrainer(t) {
+  dashTrainer = t;
+  renderDashboard();
+}
+
+function openLessonBreakdown(period) {
+  _lastBreakdownPeriod = period;
+  _selectedLessons = {};
+  updateBreakdownSelBar();
+  let lessons, title, sub;
+  if (period === 'month') {
+    lessons = _dashViewLessons.filter(l => l.date.startsWith(_dashYm));
+    const d = new Date(_dashYm + '/01');
+    title = `當月上課明細`;
+    sub = `${d.getFullYear()} 年 ${d.getMonth()+1} 月　共 ${lessons.length} 堂${dashTrainer !== 'all' ? '　· ' + dashTrainer : ''}`;
+  } else {
+    lessons = _dashViewLessons.filter(l => l.date >= _dashWeek.start && l.date <= _dashWeek.end);
+    title = `當週上課明細`;
+    sub = `${_dashWeek.start.slice(5)} – ${_dashWeek.end.slice(5)}　共 ${lessons.length} 堂${dashTrainer !== 'all' ? '　· ' + dashTrainer : ''}`;
+  }
+
+  document.getElementById('breakdown-modal-title').textContent = title;
+  document.getElementById('breakdown-modal-sub').textContent = sub;
+
+  const byType = { '上課': 0, '代訓': 0, '其他': 0 };
+  lessons.forEach(l => {
+    const t = l.type || '上課';
+    if (byType[t] !== undefined) byType[t]++; else byType['其他']++;
+  });
+
+  const sorted = [...lessons].sort((a, b) => a.date.localeCompare(b.date));
+
+  // detect duplicates: same dog + same date > 1
+  const dupKey = l => `${l.dog}__${l.date}`;
+  const keyCount = {};
+  sorted.forEach(l => { const k = dupKey(l); keyCount[k] = (keyCount[k]||0) + 1; });
+  const dupCount = Object.values(keyCount).filter(n => n > 1).reduce((s, n) => s + n, 0);
+
+  document.getElementById('breakdown-modal-body').innerHTML = lessons.length === 0
+    ? `<div class="breakdown-empty">這段期間沒有上課紀錄</div>`
+    : `<div style="display:flex;gap:10px;margin-bottom:10px;flex-wrap:wrap;align-items:center;">
+        ${Object.entries(byType).filter(([,n])=>n>0).map(([k,n])=>`
+          <span style="font-size:12px;font-weight:700;color:var(--muted);">${k} <span style="color:var(--text);font-size:15px;">${n}</span> 堂</span>
+        `).join('')}
+        <span style="flex:1"></span>
+        ${dupCount > 0 ? `<button class="breakdown-sel-quick" onclick="selectAllDupsInBreakdown()">⚠️ 全選重複（${dupCount}筆）</button>` : ''}
+        <button class="breakdown-sel-quick" onclick="selectAllInBreakdown()">全選</button>
+        <button class="breakdown-sel-quick" onclick="clearBreakdownSel()">取消全選</button>
+       </div>
+       ${dupCount > 0 ? `<div style="font-size:11px;color:#92400e;background:#fff3cd;border-radius:7px;padding:6px 10px;margin-bottom:10px;">同一隻狗同一天出現超過 1 筆，建議勾選後一次刪除。</div>` : ''}
+       <table class="breakdown-table">
+         <thead><tr>
+           <th style="width:28px;"><input type="checkbox" id="breakdown-check-all" onchange="toggleAllBreakdown(this.checked)"></th>
+           <th>日期</th><th>狗狗</th><th>訓練師</th><th>類型</th>
+         </tr></thead>
+         <tbody>
+           ${sorted.map((l) => {
+             const isDup = keyCount[dupKey(l)] > 1;
+             const lr = l.logRow || 0;
+             const cr = l.clientRow || 0;
+             const tp = encodeURIComponent(l.type || '上課');
+             return `<tr id="bdr-${lr}" style="${isDup ? 'background:#fff8e6;' : ''}">
+               <td><input type="checkbox" class="breakdown-row-cb" data-lr="${lr}" data-cr="${cr}" data-type="${encodeURIComponent(l.type||'上課')}" onchange="toggleBreakdownSel(${lr},${cr},decodeURIComponent('${tp}'),this.checked)"></td>
+               <td>${esc(l.date)}</td>
+               <td style="font-weight:700;">${esc(l.dog)}${isDup ? ' <span style="font-size:10px;color:#b45309;font-weight:800;">重複</span>' : ''}</td>
+               <td style="color:var(--muted);font-size:11px;">${esc(l.trainer||'')}</td>
+               <td><span class="lesson-type-badge ${l.type==='代訓'?'lt-train':'lt-class'}">${esc(l.type||'上課')}</span></td>
+             </tr>`;
+           }).join('')}
+         </tbody>
+       </table>`;
+
+  document.getElementById('breakdown-modal').classList.add('open');
+}
+
+function updateBreakdownSelBar() {
+  const bar   = document.getElementById('breakdown-sel-bar');
+  const count = document.getElementById('breakdown-sel-count');
+  if (!bar) return;
+  const n = Object.keys(_selectedLessons).length;
+  if (n === 0) { bar.style.display = 'none'; }
+  else { bar.style.display = 'flex'; count.textContent = `已選 ${n} 筆`; }
+}
+
+function toggleBreakdownSel(logRow, clientRow, type, checked) {
+  const row = document.getElementById('bdr-' + logRow);
+  if (checked) {
+    _selectedLessons[logRow] = { logRow, clientRow, type };
+    if (row) row.classList.add('bdr-selected');
+  } else {
+    delete _selectedLessons[logRow];
+    if (row) row.classList.remove('bdr-selected');
+  }
+  updateBreakdownSelBar();
+}
+
+function toggleAllBreakdown(checked) {
+  document.querySelectorAll('.breakdown-row-cb').forEach(cb => {
+    const lr = parseInt(cb.dataset.lr);
+    const cr = parseInt(cb.dataset.cr);
+    const tp = decodeURIComponent(cb.dataset.type);
+    cb.checked = checked;
+    toggleBreakdownSel(lr, cr, tp, checked);
+  });
+}
+
+function selectAllDupsInBreakdown() {
+  document.querySelectorAll('.breakdown-row-cb').forEach(cb => {
+    const row = document.getElementById('bdr-' + cb.dataset.lr);
+    if (row && row.style.background.includes('fff8e6')) {
+      cb.checked = true;
+      toggleBreakdownSel(parseInt(cb.dataset.lr), parseInt(cb.dataset.cr), decodeURIComponent(cb.dataset.type), true);
+    }
+  });
+}
+
+function selectAllInBreakdown() {
+  toggleAllBreakdown(true);
+  const ca = document.getElementById('breakdown-check-all');
+  if (ca) ca.checked = true;
+}
+
+function clearBreakdownSel() {
+  toggleAllBreakdown(false);
+  const ca = document.getElementById('breakdown-check-all');
+  if (ca) ca.checked = false;
+}
+
+async function deleteSelectedLessons() {
+  const entries = Object.values(_selectedLessons);
+  if (entries.length === 0) return;
+  if (!confirm(`確定刪除已選的 ${entries.length} 筆紀錄？\n（同步修正各客戶堂數統計）`)) return;
+
+  const bar = document.getElementById('breakdown-sel-bar');
+  if (bar) bar.style.opacity = '0.5';
+
+  if (isDemo) {
+    entries.forEach(e => {
+      const c = allClients.find(x => x._row === e.clientRow);
+      if (!c) return;
+      const idx = c.lessonDates.findIndex(l => l.logRow === e.logRow);
+      if (idx !== -1) c.lessonDates.splice(idx, 1);
+      if (e.type === '代訓') { c.trainDone = Math.max(0,(c.trainDone||0)-1); c.trainLeft=(c.trainLeft||0)+1; }
+      else                   { c.classDone = Math.max(0,(c.classDone||0)-1); c.classLeft=(c.classLeft||0)+1; }
+    });
+    _selectedLessons = {};
+    showToast(`已刪除 ${entries.length} 筆（Demo 模式）`);
+    openLessonBreakdown(_lastBreakdownPeriod);
+    return;
+  }
+
+  try {
+    const json = await fetch(SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'deleteLessons', entries })
+    }).then(r => r.json());
+    if (!json.success) throw new Error(json.error);
+
+    // Update local cache — sort desc to fix logRow shifts
+    const sortedEntries = [...entries].sort((a,b) => b.logRow - a.logRow);
+    sortedEntries.forEach(e => {
+      const c = allClients.find(x => x._row === e.clientRow);
+      if (c) {
+        const idx = c.lessonDates.findIndex(l => l.logRow === e.logRow);
+        if (idx !== -1) c.lessonDates.splice(idx, 1);
+        if (e.type === '代訓') { c.trainDone=Math.max(0,(c.trainDone||0)-1); c.trainLeft=(c.trainLeft||0)+1; }
+        else                   { c.classDone=Math.max(0,(c.classDone||0)-1); c.classLeft=(c.classLeft||0)+1; }
+      }
+      // Shift logRows for all remaining entries above the deleted row
+      allClients.forEach(c2 => {
+        c2.lessonDates.forEach(l => { if (l.logRow > e.logRow) l.logRow--; });
+      });
+    });
+
+    _selectedLessons = {};
+    showToast(`✓ 已刪除 ${entries.length} 筆，堂數已修正`);
+    openLessonBreakdown(_lastBreakdownPeriod);
+  } catch(err) {
+    showToast('⚠️ ' + err.message);
+    if (bar) bar.style.opacity = '1';
+  }
+}
+
+function closeLessonBreakdown(e) {
+  if (e.target === document.getElementById('breakdown-modal')) {
+    document.getElementById('breakdown-modal').classList.remove('open');
+  }
+}
+
+async function deleteLessonEntry(logRow, clientRow, type, dog, date, btn) {
+  if (!confirm(`確定刪除「${dog}」${date} 的${type}紀錄？\n（同步修正堂數統計）`)) return;
+  btn.classList.add('loading');
+
+  if (isDemo) {
+    const c = allClients.find(x => x._row === clientRow);
+    if (c) {
+      const idx = c.lessonDates.findIndex(l => l.date === date && l.type === type && l.logRow === logRow);
+      if (idx !== -1) c.lessonDates.splice(idx, 1);
+      if (type === '代訓') { c.trainDone = Math.max(0, (c.trainDone||0)-1); c.trainLeft = (c.trainLeft||0)+1; }
+      else                 { c.classDone = Math.max(0, (c.classDone||0)-1); c.classLeft = (c.classLeft||0)+1; }
+    }
+    btn.closest('tr').style.opacity = '0.3';
+    setTimeout(() => { openLessonBreakdown(_lastBreakdownPeriod); showToast('已刪除（Demo 模式）'); }, 400);
+    return;
+  }
+
+  try {
+    const json = await fetch(SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'deleteLesson', logRow, clientRow, type })
+    }).then(r => r.json());
+    if (!json.success) throw new Error(json.error);
+
+    // update local cache
+    const c = allClients.find(x => x._row === clientRow);
+    if (c) {
+      const idx = c.lessonDates.findIndex(l => l.logRow === logRow);
+      if (idx !== -1) c.lessonDates.splice(idx, 1);
+      if (type === '代訓') { c.trainDone = Math.max(0, (c.trainDone||0)-1); c.trainLeft = (c.trainLeft||0)+1; }
+      else                 { c.classDone = Math.max(0, (c.classDone||0)-1); c.classLeft = (c.classLeft||0)+1; }
+      // fix logRow for remaining entries (sheet rows shifted after deletion)
+      c.lessonDates.forEach(l => { if (l.logRow > logRow) l.logRow--; });
+    }
+    // also fix other clients' logRows
+    allClients.forEach(c2 => {
+      if (c2._row === clientRow) return;
+      c2.lessonDates.forEach(l => { if (l.logRow > logRow) l.logRow--; });
+    });
+
+    btn.closest('tr').style.transition = 'opacity 0.3s';
+    btn.closest('tr').style.opacity = '0';
+    setTimeout(() => { openLessonBreakdown(_lastBreakdownPeriod); showToast('已刪除並修正堂數'); }, 350);
+  } catch(err) {
+    showToast('⚠️ ' + err.message);
+    btn.classList.remove('loading');
+  }
+}
+
+function getWeekRange(dateStr) {
+  const d   = new Date(dateStr);
+  const day = d.getDay();
+  const mon = new Date(d);
+  mon.setDate(d.getDate() - (day === 0 ? 6 : day - 1));
+  const sun = new Date(mon);
+  sun.setDate(mon.getDate() + 6);
+  const fmt = dt => `${dt.getFullYear()}/${String(dt.getMonth()+1).padStart(2,'0')}/${String(dt.getDate()).padStart(2,'0')}`;
+  return { start: fmt(mon), end: fmt(sun) };
+}
+
+function renderDashboard() {
+  const db  = document.getElementById('dashboard');
+  const all = allClients;
+
+  if (!dashDate) dashDate = todayStr();
+
+  // ── Time period helpers ────────────────────────────────────────
+  const selDate = new Date(dashDate);
+  const ym      = `${selDate.getFullYear()}/${String(selDate.getMonth()+1).padStart(2,'0')}`;
+  const ymLabel = `${selDate.getFullYear()} 年 ${selDate.getMonth()+1} 月`;
+  const week    = getWeekRange(dashDate);
+  const weekLabel = `${week.start.slice(5)} – ${week.end.slice(5)}`;
+
+  // ── All lesson entries ─────────────────────────────────────────
+  const allLessons = [];
+  all.forEach(c => {
+    (c.lessonDates||[]).forEach(l => {
+      if (l.date) allLessons.push({ ...l, dog: c.dog, trainer: c.trainer, clientRow: c._row });
+    });
+  });
+  allLessons.sort((a,b) => b.date.localeCompare(a.date));
+
+  // ── Trainer filter (dashboard-level) ──────────────────────────
+  const dataTrainers = [...new Set(all.map(c=>c.trainer).filter(Boolean))].sort((a,b) => {
+    const ai = TRAINERS_INFO.findIndex(t => a.includes(t.name));
+    const bi = TRAINERS_INFO.findIndex(t => b.includes(t.name));
+    if (ai !== -1 && bi !== -1) return ai - bi;
+    return a.localeCompare(b);
+  });
+  const viewClients = dashTrainer === 'all' ? all : all.filter(c => c.trainer === dashTrainer);
+  const viewLessons = dashTrainer === 'all' ? allLessons : allLessons.filter(l => l.trainer === dashTrainer);
+
+  // ── Month / week counts ────────────────────────────────────────
+  const monthTotal = viewLessons.filter(l => l.date.startsWith(ym)).length;
+  const weekTotal  = viewLessons.filter(l => l.date >= week.start && l.date <= week.end).length;
+
+  // store for breakdown modal
+  _dashViewLessons = viewLessons;
+  _dashYm = ym;
+  _dashWeek = week;
+
+  // ── Overview stats ─────────────────────────────────────────────
+  const active  = all.filter(c => c.status === '進行中').length;
+  const paused  = all.filter(c => c.status === '暫停').length;
+  const done    = all.filter(c => c.status === '已結課' || (c.classLeft === 0 && c.classTotal > 0)).length;
+  const urgent  = all.filter(c => c.status === '進行中' && c.classLeft > 0 && c.classLeft <= 2 && c.classTotal > 0).length;
+  const warning = all.filter(c => c.status === '進行中' && c.classLeft <= 4 && c.classLeft > 2 && c.classTotal > 0).length;
+
+  const NON_TRAINER_LABELS = new Set(['已完課', '進行中', '暫停', '結束', '待開課']);
+  const trainers = [...new Set(all.map(c=>c.trainer).filter(t => t && !NON_TRAINER_LABELS.has(t)))].sort();
+
+  // ── Plan distribution ──────────────────────────────────────────
+  const planCount = key => all.filter(c => (c.plan||'').match(/[ABCD]/)?.[0] === key).length;
+  const plans = [['A','#1b6a4a','#daeee6'],['B','#1a4070','#d9eaf6'],['D','#6a1a7a','#f4e8f8']];
+  const planOther = all.length - plans.reduce((s,[k]) => s + planCount(k), 0);
+
+  db.innerHTML = `
+  <!-- ── 訓練師介紹 ── -->
+  <div class="trainer-profiles">
+    ${TRAINERS_INFO.map(t => `
+    <div class="trainer-profile-card">
+      <div class="trainer-avatar">
+        ${t.photo
+          ? `<img src="${t.photo}" alt="${esc(t.name)}">`
+          : `<span class="trainer-avatar-placeholder">${esc(t.initial)}</span>`}
+        ${canEditPhoto(t.name)
+          ? `<button class="avatar-edit-btn" onclick="triggerPhotoUpload('${esc(t.name)}')" title="更換大頭照">📷</button>`
+          : ''}
+      </div>
+      <div class="trainer-profile-info">
+        <div class="trainer-profile-name">${esc(t.name)} <span style="font-weight:400;font-size:13px;color:#888;letter-spacing:0.03em;">${esc(t.englishName||'')}</span></div>
+        <div class="trainer-profile-title">${esc(t.title)}</div>
+        <div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:6px;">
+          ${t.badges.map(b => `<span class="trainer-profile-badge ${b.cls}">${esc(b.label)}</span>`).join('')}
+        </div>
+      </div>
+    </div>`).join('')}
+  </div>
+
+  <!-- ── 日期選擇器 ── -->
+  <div class="dash-date-bar">
+    <span class="dash-date-label">📅 選擇日期</span>
+    <input type="date" id="dash-date" class="dash-date-input" value="${dashDate}" onchange="onDashDateChange(this.value)">
+    <span class="dash-date-hint">查看該日所在月份及週數的上課統計</span>
+  </div>
+
+  <!-- ── 訓練師篩選 ── -->
+  <div class="dash-trainer-bar">
+    <span class="dash-trainer-label">👤 訓練師</span>
+    <div class="dash-trainer-chips">
+      <button class="dash-trainer-chip ${dashTrainer==='all'?'active':''}" onclick="setDashTrainer('all')">全部</button>
+      ${dataTrainers.map(t => `
+        <button class="dash-trainer-chip ${dashTrainer===t?'active':''}" data-trainer="${esc(t)}" onclick="setDashTrainer(this.dataset.trainer)">${esc(t)}</button>
+      `).join('')}
+    </div>
+  </div>
+
+  <!-- ── 時段統計 ── -->
+  <div class="dash-section">
+    <div class="dash-section-title">時段統計</div>
+    <div class="period-big">
+      <div class="period-card period-card-clickable" onclick="openLessonBreakdown('month')">
+        <div class="period-card-num">${monthTotal}</div>
+        <div class="period-card-unit">堂</div>
+        <div class="period-card-label">當月總堂數（${ymLabel}）</div>
+        <div class="period-card-hint">點擊查看明細</div>
+      </div>
+      <div class="period-card period-card-clickable" onclick="openLessonBreakdown('week')">
+        <div class="period-card-num">${weekTotal}</div>
+        <div class="period-card-unit">堂</div>
+        <div class="period-card-label">當週總堂數（${weekLabel}）</div>
+        <div class="period-card-hint">點擊查看明細</div>
+      </div>
+    </div>
+
+    <div class="dash-table">
+      <div class="dash-table-row dash-table-header">
+        <span class="dash-tr-name">訓練師</span>
+        <span class="dash-tr-cell">✅ 已完成（月）</span>
+        <span class="dash-tr-cell">🗓 請假（月）</span>
+        <span class="dash-tr-cell">📚 正在上課（剩餘）</span>
+      </div>
+      ${(dashTrainer === 'all' ? trainers : trainers.filter(t => t === dashTrainer)).map(t => {
+        const tc       = all.filter(c => c.trainer === t);
+        const tDone    = allLessons.filter(l => l.trainer === t && l.date.startsWith(ym)).length;
+        const tAbsence = tc.reduce((sum, c) => sum + (c.absences||[]).filter(a => a && a.startsWith(ym)).length, 0);
+        const tLeft    = tc.filter(c => c.status === '進行中').reduce((sum, c) => sum + (c.classLeft||0), 0);
+        return `<div class="dash-table-row">
+          <span class="dash-tr-name">${esc(t)}</span>
+          <span class="dash-tr-cell accent">${tDone || '—'}</span>
+          <span class="dash-tr-cell ${tAbsence>0?'red':''}">${tAbsence || '—'}</span>
+          <span class="dash-tr-cell">${tLeft || '—'}</span>
+        </div>`;
+      }).join('')}
+      ${dashTrainer === 'all' ? `
+      <div class="dash-table-row" style="background:var(--bg);">
+        <span class="dash-tr-name" style="font-size:11px;color:var(--muted);">合計</span>
+        <span class="dash-tr-cell accent" style="font-weight:800;">${monthTotal}</span>
+        <span class="dash-tr-cell red" style="font-weight:800;">
+          ${all.reduce((s,c)=>s+(c.absences||[]).filter(a=>a&&a.startsWith(ym)).length,0)||'—'}
+        </span>
+        <span class="dash-tr-cell" style="font-weight:800;">
+          ${all.filter(c=>c.status==='進行中').reduce((s,c)=>s+(c.classLeft||0),0)||'—'}
+        </span>
+      </div>` : ''}
+    </div>
+  </div>
+
+  <!-- ── 訓練師圓餅圖 ── -->
+  <div class="dash-section">
+    <div class="dash-section-title">訓練師 · 當月課程類型分布（${ymLabel}）</div>
+    <div class="trainer-pie-row">
+      ${(dashTrainer === 'all' ? TRAINERS_INFO : TRAINERS_INFO.filter(ti => dashTrainer.includes(ti.name))).map(ti => {
+        const t = ti.name;
+        // Count lessons by plan type for this trainer this month
+        const counts = Object.fromEntries(PLAN_ORDER.map(k => [k, 0]));
+        allLessons.filter(l => l.trainer === t && l.date.startsWith(ym)).forEach(l => {
+          const client = all.find(c => c.dog === l.dog && c.trainer === t);
+          const key = getPlanKey(client?.plan || '');
+          counts[key] = (counts[key] || 0) + 1;
+        });
+        const total = Object.values(counts).reduce((s,n) => s+n, 0);
+
+        // Fallback: count clients by plan if no lessons this month
+        const fallback = !total;
+        const displayCounts = { ...counts };
+        if (fallback) {
+          all.filter(c => c.trainer === t).forEach(c => {
+            const key = getPlanKey(c.plan || '');
+            displayCounts[key] = (displayCounts[key] || 0) + 1;
+          });
+        }
+
+        const slices = PLAN_ORDER.map(k => ({ label: k, count: displayCounts[k]||0, color: PLAN_COLORS[k] }));
+        const displayTotal = Object.values(displayCounts).reduce((s,n) => s+n, 0);
+        const svg = makePieSVG(slices);
+
+        return `<div class="trainer-pie-card">
+          <div class="trainer-pie-name">${esc(t)}</div>
+          ${svg ? `
+          <div class="trainer-pie-body">
+            ${svg}
+            <div class="pie-legend">
+              ${slices.filter(s => s.count > 0).map(s => `
+                <div class="pie-legend-item">
+                  <span class="pie-dot" style="background:${s.color}"></span>
+                  <span class="pie-legend-label">${s.label}</span>
+                  <span class="pie-legend-count" style="color:${s.color}">${s.count}</span>
+                </div>`).join('')}
+            </div>
+          </div>
+          <div class="pie-total">${fallback ? (displayTotal > 0 ? '客戶分布（本月無紀錄）' : '尚無客戶資料') : `本月共 ${total} 堂`}</div>
+          ` : `<div class="no-pie-data">尚無客戶資料</div>`}
+        </div>`;
+      }).join('')}
+    </div>
+  </div>
+
+  <!-- ── 概覽 ── -->
+  <div class="dash-section">
+    <div class="dash-section-title">整體概覽</div>
+    <div class="dash-grid-4">
+      <div class="dash-stat-card">
+        <div class="dash-stat-icon">🐾</div>
+        <div class="dash-stat-num" style="color:var(--accent)">${active}</div>
+        <div class="dash-stat-label">進行中</div>
+      </div>
+      <div class="dash-stat-card">
+        <div class="dash-stat-icon">⚠️</div>
+        <div class="dash-stat-num" style="color:${urgent>0?'var(--red)':'var(--muted)'}">${urgent}</div>
+        <div class="dash-stat-label">需跟進（≤2堂）</div>
+      </div>
+      <div class="dash-stat-card">
+        <div class="dash-stat-icon">⏸</div>
+        <div class="dash-stat-num" style="color:var(--gray)">${paused}</div>
+        <div class="dash-stat-label">暫停</div>
+      </div>
+      <div class="dash-stat-card">
+        <div class="dash-stat-icon">👥</div>
+        <div class="dash-stat-num">${all.length}</div>
+        <div class="dash-stat-label">全部客戶</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 方案 & 狀態 ── -->
+  <div class="dash-grid-2">
+    <div class="dash-section">
+      <div class="dash-section-title">方案分布</div>
+      <div class="dash-table">
+        ${[...plans.map(([k,c,bg]) => [k+'方案', planCount(k), c, bg]),
+           ['其他', planOther, '#888', '#f3f4f6']
+          ].filter(([,n]) => n > 0).map(([name, n, color, bg]) => {
+            const pct = all.length > 0 ? Math.round(n/all.length*100) : 0;
+            return `<div class="dash-table-row">
+              <span style="flex:1;font-weight:700;font-size:13px;color:${color}">${name}</span>
+              <div style="flex:2;height:12px;background:var(--bg);border-radius:4px;overflow:hidden;margin:0 10px;">
+                <div style="width:${pct}%;height:100%;background:${bg};border-right:2px solid ${color};border-radius:4px;"></div>
+              </div>
+              <span style="font-size:12px;color:var(--muted);min-width:58px;text-align:right;">${n} 位 ${pct}%</span>
+            </div>`;
+          }).join('')}
+      </div>
+    </div>
+    <div class="dash-section">
+      <div class="dash-section-title">狀態分布</div>
+      <div class="dash-table">
+        ${[
+          ['🔴 緊急 ≤2堂', urgent, 'var(--red)'],
+          ['🟡 注意 3–4堂', warning, 'var(--yellow)'],
+          ['🟢 正常 ≥5堂', Math.max(0, active-urgent-warning), 'var(--accent)'],
+          ['⏸ 暫停', paused, 'var(--gray)'],
+          ['☑ 已結課', done, '#bbb'],
+        ].map(([label, n, color]) => `
+          <div class="dash-table-row">
+            <span style="flex:1;font-size:12px;">${label}</span>
+            <span style="font-weight:800;font-size:18px;color:${color};min-width:32px;text-align:right;">${n}</span>
+          </div>`).join('')}
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 最近上課紀錄 ── -->
+  <div class="dash-section">
+    <div class="dash-section-title">最近上課紀錄${dashTrainer !== 'all' ? `（${esc(dashTrainer)}）` : ''}</div>
+    <div class="recent-lesson-list">
+      ${viewLessons.slice(0,10).map(l => `
+        <div class="recent-lesson-item">
+          <span class="rl-date">${esc(l.date)}${l.time?' '+esc(l.time):''}</span>
+          <span class="rl-dog">${esc(l.dog)}</span>
+          <span class="rl-trainer">${esc(l.trainer)}</span>
+          <span class="lesson-type-badge ${l.type==='代訓'?'lt-train':'lt-class'}">${esc(l.type||'上課')}</span>
+        </div>`).join('')}
+      ${viewLessons.length===0
+        ? '<div style="color:var(--muted);font-size:12px;padding:8px;font-style:italic;">尚無上課紀錄</div>'
+        : ''}
+    </div>
+  </div>
+
+  ${currentUser && currentUser.role === '管理員' ? `
+  <!-- ── 管理員工具 ── -->
+  <div class="dash-section" style="border:1.5px solid #dc2626;background:#fff5f5;margin-top:10px;">
+    <div class="dash-section-title" style="color:#dc2626;">⚠️ 管理員工具</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:14px;line-height:1.6;">
+      <strong>清除並重建</strong>：清空上課紀錄分頁，從日曆完整重新匯入，再重算每位客戶堂數。<br>
+      <strong>重新計算堂數</strong>：不動紀錄，只依現有紀錄重新統計每人已上 / 剩餘堂數。
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+      <button onclick="clearAndResync(this)"
+        style="background:#dc2626;color:#fff;border:none;border-radius:8px;padding:9px 18px;font-size:13px;font-weight:700;cursor:pointer;transition:opacity 0.2s;"
+        onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
+        🗑️ 清除並從日曆重建紀錄
+      </button>
+      <button onclick="fixCounts(this)"
+        style="background:#d97706;color:#fff;border:none;border-radius:8px;padding:9px 18px;font-size:13px;font-weight:700;cursor:pointer;transition:opacity 0.2s;"
+        onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
+        🔧 重新計算堂數
+      </button>
+    </div>
+  </div>` : ''}`;
+}
+</script>
+
+<!-- Lesson breakdown modal -->
+<div class="breakdown-modal-overlay" id="breakdown-modal" onclick="closeLessonBreakdown(event)">
+  <div class="breakdown-modal">
+    <div class="breakdown-modal-title" id="breakdown-modal-title"></div>
+    <div class="breakdown-modal-sub" id="breakdown-modal-sub"></div>
+    <div id="breakdown-modal-body"></div>
+    <div id="breakdown-sel-bar" style="display:none;margin-top:14px;padding:10px 12px;background:#fee2e2;border-radius:10px;display:none;align-items:center;gap:10px;">
+      <span id="breakdown-sel-count" style="flex:1;font-size:13px;font-weight:700;color:#b91c1c;"></span>
+      <button class="btn-cancel" onclick="clearBreakdownSel()">取消</button>
+      <button class="btn-primary" style="background:#dc2626;border-color:#dc2626;" onclick="deleteSelectedLessons()">刪除已選</button>
+    </div>
+    <button class="act-btn" style="margin-top:14px;width:100%;" onclick="document.getElementById('breakdown-modal').classList.remove('open')">關閉</button>
+  </div>
+</div>
+
+<!-- Hidden photo upload input -->
+<input type="file" id="photo-upload-input" accept="image/*" style="display:none" onchange="handlePhotoUpload()">
+
+<!-- Login overlay -->
+<div class="login-overlay" id="login-overlay">
+  <div class="login-card">
+    <div class="login-logo">Z</div>
+    <div class="login-title">ZenPet 堂數追蹤</div>
+    <div class="login-sub">請輸入您的 Gmail 信箱登入</div>
+    <input class="login-input" id="login-email" type="email" placeholder="your@gmail.com"
+      onkeydown="if(event.key==='Enter')doLogin()">
+    <div class="login-error" id="login-error"></div>
+    <button class="login-btn" onclick="doLogin()">登入</button>
+  </div>
+</div>
+</body>
+</html>

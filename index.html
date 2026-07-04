@@ -384,6 +384,12 @@
     }
     .btn-add-lesson:hover { background: var(--accent); color: white; }
 
+    /* Progress breakdown */
+    .prog-breakdown {
+      font-size: 11px; color: var(--muted); text-align: right;
+      margin-top: 4px; letter-spacing: 0.01em;
+    }
+
     .modal-btns { display: flex; gap: 10px; margin-top: 20px; }
     .btn-primary {
       flex: 1; padding: 13px; background: var(--accent); color: white;
@@ -860,6 +866,11 @@
   <div id="alert-list"></div>
 </div>
 
+<div id="pause-alert-section" class="alert-section" style="display:none;border-color:var(--yellow);background:rgba(251,191,36,0.06);">
+  <div class="alert-header" style="display:flex;align-items:center;gap:7px;color:var(--yellow);"><span class="pulse-dot" style="background:var(--yellow);"></span> 即將恢復課程 — 請記得聯繫飼主</div>
+  <div id="pause-alert-list"></div>
+</div>
+
 <div class="section-group">
   <div class="tabs-scroll" id="trainer-tabs"></div>
   <div class="status-scroll">
@@ -867,6 +878,7 @@
     <button class="status-chip" onclick="setStatus('進行中')" data-s="進行中">進行中</button>
     <button class="status-chip" onclick="setStatus('暫停')" data-s="暫停">暫停</button>
     <button class="status-chip" onclick="setStatus('結課')" data-s="結課">已結課</button>
+    <button class="status-chip" id="archive-toggle-btn" onclick="toggleArchived()" style="margin-left:8px;border-style:dashed;">顯示結課（0）</button>
   </div>
 </div>
 
@@ -911,6 +923,20 @@
   </div>
 </div>
 
+<!-- ── Pause Modal ── -->
+<div class="date-modal-overlay" id="pause-modal" onclick="closePauseModal(event)">
+  <div class="date-modal">
+    <div class="date-modal-title">暫停課程</div>
+    <div class="date-modal-sub" id="pause-modal-sub">將刪除日曆上的剩餘課程，並標示為暫停</div>
+    <div style="font-size:12px;color:var(--muted);font-weight:600;margin-bottom:6px;">預計恢復日期</div>
+    <input type="date" id="pause-date-input">
+    <div class="date-modal-btns">
+      <button class="btn-cancel" onclick="closePauseModal()">取消</button>
+      <button class="btn-primary" id="pause-confirm-btn" style="background:var(--yellow);color:#000;">確認暫停</button>
+    </div>
+  </div>
+</div>
+
 <!-- ── Main Modal ── -->
 <div class="modal-overlay" id="modal" onclick="closeModal(event)">
   <div class="modal">
@@ -943,8 +969,25 @@ const DEMO = [
   {_row:12, id:'195', dog:'豆豆',     owner:'李大明/0988888888',       plan:'B方案', period:'第1期', classTotal:20, classDone:20, classLeft:0,  trainTotal:10, trainDone:10, trainLeft:0,  trainer:'羊桃', startDate:'2025/12/01', status:'已結課', absences:[], notes:'', lessonDates:[{date:'2026/05/26',type:'上課'},{date:'2026/06/01',type:'上課'}]},
 ];
 
-let allClients = [], activeTrainer = 'all', activeStatus = 'all', currentView = 'list', dashDate = '';
+let allClients = [], activeTrainer = 'all', activeStatus = 'all', currentView = 'list', dashDate = '', showArchived = false;
 const isDemo = (SCRIPT_URL === 'YOUR_APPS_SCRIPT_URL_HERE');
+
+function calcEndDate(startDate, plan) {
+  if (!startDate) return '';
+  const p = String(plan || '');
+  const months = p.includes('B') ? 4 : p.includes('A') ? 2 : 0;
+  if (!months) return '';
+  const parts = startDate.split('/');
+  if (parts.length < 3) return '';
+  const d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+  d.setMonth(d.getMonth() + months);
+  return `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function parsePauseUntil(notes) {
+  const m = String(notes || '').match(/【暫停至(\d{4}\/\d{2}\/\d{2})】/);
+  return m ? m[1] : '';
+}
 
 // ── 允許使用者清單（email → { name, role }）──────────────────
 const ALLOWED_USERS = {
@@ -1172,15 +1215,41 @@ function renderAlerts() {
     .filter(c => c.status === '進行中' && c.classLeft > 0 && c.classLeft <= 2 && c.classTotal > 0)
     .sort((a,b) => a.classLeft - b.classLeft);
   const sec = document.getElementById('alert-section');
-  if (!urgent.length) { sec.style.display = 'none'; return; }
-  sec.style.display = 'block';
-  document.getElementById('alert-list').innerHTML = urgent.map(c => {
-    const owner = (c.owner||'').split('/')[0].trim();
-    return `<div class="alert-item" onclick="openModal(${c._row})">
-      <span><span class="alert-dog">${esc(c.dog)}</span><span class="alert-meta">${esc(owner)} · ${esc(c.trainer)}</span></span>
-      <span class="remaining-badge rb-red">剩 ${c.classLeft} 堂</span>
-    </div>`;
-  }).join('');
+  if (!urgent.length) { sec.style.display = 'none'; } else {
+    sec.style.display = 'block';
+    document.getElementById('alert-list').innerHTML = urgent.map(c => {
+      const owner = (c.owner||'').split('/')[0].trim();
+      return `<div class="alert-item" onclick="openModal(${c._row})">
+        <span><span class="alert-dog">${esc(c.dog)}</span><span class="alert-meta">${esc(owner)} · ${esc(c.trainer)}</span></span>
+        <span class="remaining-badge rb-red">剩 ${c.classLeft} 堂</span>
+      </div>`;
+    }).join('');
+  }
+
+  // Pause resume alerts (within 7 days)
+  const today = new Date(); today.setHours(0,0,0,0);
+  const in7   = new Date(today.getTime() + 7 * 86400000);
+  const resuming = allClients.filter(c => {
+    if (c.status !== '暫停') return false;
+    const pu = parsePauseUntil(c.notes);
+    if (!pu) return false;
+    const parts = pu.split('/');
+    const d = new Date(parseInt(parts[0]), parseInt(parts[1])-1, parseInt(parts[2]));
+    return d >= today && d <= in7;
+  });
+  const pauseSec = document.getElementById('pause-alert-section');
+  if (!resuming.length) { if (pauseSec) pauseSec.style.display = 'none'; return; }
+  if (pauseSec) {
+    pauseSec.style.display = 'block';
+    document.getElementById('pause-alert-list').innerHTML = resuming.map(c => {
+      const owner = (c.owner||'').split('/')[0].trim();
+      const pu = parsePauseUntil(c.notes);
+      return `<div class="alert-item" onclick="openModal(${c._row})">
+        <span><span class="alert-dog">${esc(c.dog)}</span><span class="alert-meta">${esc(owner)} · ${esc(c.trainer)}</span></span>
+        <span class="remaining-badge rb-yellow">恢復：${esc(pu)}</span>
+      </div>`;
+    }).join('');
+  }
 }
 
 function renderTrainerTabs() {
@@ -1210,6 +1279,10 @@ function renderClients() {
     if (activeStatus === '結課') list = list.filter(c => c.status === '已結課' || c.classLeft === 0);
     else list = list.filter(c => c.status === activeStatus);
   }
+  // Hide archived ('已結課') by default unless showArchived is on or user explicitly filtered to '結課'
+  if (!showArchived && activeStatus !== '結課') {
+    list = list.filter(c => c.status !== '已結課');
+  }
   const order = {'進行中':0,'暫停':1,'已結課':2};
   list.sort((a,b) => {
     const sa = order[a.status]??1, sb = order[b.status]??1;
@@ -1219,6 +1292,10 @@ function renderClients() {
   });
   const grid = document.getElementById('clients-grid');
   grid.innerHTML = list.length ? list.map((c, i) => renderCard(c, i)).join('') : '<div class="empty-state">沒有符合條件的客戶</div>';
+  // Update archive toggle button label
+  const archivedCount = allClients.filter(c => c.status === '已結課').length;
+  const btn = document.getElementById('archive-toggle-btn');
+  if (btn) btn.textContent = showArchived ? `隱藏結課（${archivedCount}）` : `顯示結課（${archivedCount}）`;
 }
 
 function renderCard(c, idx = 0) {
@@ -1242,22 +1319,19 @@ function renderCard(c, idx = 0) {
   const rbCls    = urgent ? 'rb-red' : warning ? 'rb-yellow' : done ? 'rb-done' : 'rb-green';
   const rbText   = done ? '結課' : `剩 ${c.classLeft} 堂`;
 
-  const trainBadge = c.trainTotal === 0
-    ? '<span class="remaining-badge" style="background:var(--bg);color:var(--muted);border:1px solid var(--border);">未設定</span>'
-    : c.trainLeft === 0
-      ? '<span class="remaining-badge rb-done">完成</span>'
-      : `<span class="remaining-badge rb-green">剩 ${c.trainLeft} 堂</span>`;
-  const trainRow = `
-    <div class="prog-row">
-      <div class="prog-top">
-        <span class="prog-label">代訓</span>
-        <div class="prog-right">
-          <span class="prog-count">${c.trainDone} / ${c.trainTotal || '—'}</span>
-          ${trainBadge}
-        </div>
-      </div>
-      <div class="prog-track"><div class="prog-fill ${c.trainTotal===0?'pf-done':'pf-blue'}" style="width:${c.trainTotal===0?0:trainPct}%"></div></div>
-    </div>`;
+  // Combined progress
+  const totalDone  = c.classDone + c.trainDone;
+  const totalTotal = c.classTotal + (c.trainTotal || 0);
+  const combinedPct = totalTotal > 0 ? Math.min(100, Math.round(totalDone / totalTotal * 100)) : 0;
+  const totalLeft   = c.classLeft + (c.trainLeft || 0);
+  const rbText2     = done ? '結課' : `剩 ${totalLeft} 堂`;
+  const breakdown   = c.trainTotal > 0
+    ? `上課 ${c.classDone}/${c.classTotal} &nbsp;|&nbsp; 代訓 ${c.trainDone}/${c.trainTotal}`
+    : `上課 ${c.classDone}/${c.classTotal}`;
+
+  // Contract date range
+  const endDate  = calcEndDate(c.startDate, c.plan);
+  const dateRange = c.startDate ? (endDate ? `${c.startDate} → ${endDate}` : c.startDate) : '';
 
   const dates      = (c.lessonDates||[]).filter(d=>d.date).sort((a,b)=>b.date.localeCompare(a.date));
   const lastLesson = dates[0];
@@ -1284,7 +1358,7 @@ function renderCard(c, idx = 0) {
         <div class="meta-line">
           <span>${esc(c.trainer)}</span>
           ${c.period ? `<span class="meta-dot">·</span><span>${esc(c.period)}</span>` : ''}
-          ${c.startDate ? `<span class="meta-dot">·</span><span>${esc(c.startDate)}</span>` : ''}
+          ${dateRange ? `<span class="meta-dot">·</span><span>${esc(dateRange)}</span>` : ''}
         </div>
       </div>
       <div class="card-badges">${planBadge}${statusBadge}</div>
@@ -1292,15 +1366,15 @@ function renderCard(c, idx = 0) {
     <div class="card-progress">
       <div class="prog-row">
         <div class="prog-top">
-          <span class="prog-label">上課</span>
+          <span class="prog-label">總進度</span>
           <div class="prog-right">
-            <span class="prog-count">${c.classDone} / ${c.classTotal}</span>
-            <span class="remaining-badge ${rbCls}">${rbText}</span>
+            <span class="prog-count">${totalDone} / ${totalTotal || '—'}</span>
+            <span class="remaining-badge ${rbCls}">${rbText2}</span>
           </div>
         </div>
-        <div class="prog-track"><div class="prog-fill ${fillCls}" style="width:${classPct}%"></div></div>
+        <div class="prog-track"><div class="prog-fill ${fillCls}" style="width:${combinedPct}%"></div></div>
       </div>
-      ${trainRow}
+      <div class="prog-breakdown">${breakdown}</div>
     </div>
     ${footerRows.length ? `<div class="card-footer-info">${footerRows.join('')}</div>` : ''}
     <div class="card-actions">${actions.join('')}</div>
@@ -1517,6 +1591,26 @@ function openModal(rowIndex) {
       </div>
     </div>`;
 
+  // Append pause/archive quick actions
+  const isAdmin = currentUser && currentUser.role === '管理員';
+  if (isAdmin) {
+    const puTag = parsePauseUntil(c.notes);
+    const pauseLabel = c.status === '暫停' ? `繼續課程` : `暫停課程`;
+    const pauseAction = c.status === '暫停'
+      ? `onclick="resumeClient(${c._row})"`
+      : `onclick="openPauseModal(${c._row})"`;
+    const archiveDisabled = c.status === '已結課' ? 'disabled style="opacity:.45;"' : '';
+    document.getElementById('modal-body').insertAdjacentHTML('beforeend', `
+      <div class="modal-section" style="border-top:1px solid var(--border);padding-top:12px;margin-top:4px;">
+        <div class="modal-section-title">快速動作</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="act-btn act-btn-absence" style="font-size:13px;" ${pauseAction}>⏸ ${pauseLabel}</button>
+          <button class="act-btn" style="font-size:13px;background:var(--muted);color:#fff;" ${archiveDisabled} onclick="archiveClient(${c._row})">📁 封存（已結課）</button>
+        </div>
+        ${puTag ? `<div style="font-size:12px;color:var(--muted);margin-top:6px;">暫停至 ${esc(puTag)}</div>` : ''}
+      </div>`);
+  }
+
   document.getElementById('modal-confirm').onclick = saveModal;
   document.getElementById('modal').classList.add('open');
 }
@@ -1594,6 +1688,81 @@ async function saveModal() {
 function closeModal(e) {
   if (e && e.target !== document.getElementById('modal')) return;
   document.getElementById('modal').classList.remove('open');
+}
+
+// ── Archive (封存) ─────────────────────────────────────────────
+async function archiveClient(rowIndex) {
+  const c = allClients.find(x => x._row === rowIndex);
+  if (!c) return;
+  if (!confirm(`確定要封存「${c.dog}」的課程？\n狀態將設為「已結課」，可隨時透過「顯示結課」找回。`)) return;
+  closeModal();
+  if (isDemo) { if (c) c.status = '已結課'; renderAll(); showToast('已封存（示範模式）'); return; }
+  try {
+    await fetch(SCRIPT_URL, { method:'POST', body: JSON.stringify({ action:'archiveClient', rowIndex }) }).then(r=>r.json());
+    if (c) c.status = '已結課';
+    renderAll(); showToast(`✓ 已封存 ${c.dog}（已結課）`);
+  } catch (err) { showToast(`⚠️ ${err.message}`); }
+}
+
+// ── Pause (暫停) ───────────────────────────────────────────────
+let pauseRow = null;
+function openPauseModal(rowIndex) {
+  const c = allClients.find(x => x._row === rowIndex);
+  if (!c) return;
+  pauseRow = rowIndex;
+  closeModal();
+  document.getElementById('pause-modal-sub').textContent = `${c.dog} — 將刪除日曆剩餘課程並標示為暫停`;
+  const d = new Date(); d.setMonth(d.getMonth() + 1);
+  document.getElementById('pause-date-input').value = d.toISOString().slice(0, 10);
+  document.getElementById('pause-confirm-btn').onclick = doPauseClient;
+  document.getElementById('pause-modal').classList.add('open');
+}
+
+function closePauseModal(e) {
+  if (e && e.target !== document.getElementById('pause-modal')) return;
+  document.getElementById('pause-modal').classList.remove('open');
+}
+
+async function doPauseClient() {
+  const raw = document.getElementById('pause-date-input').value;
+  if (!raw) { showToast('請選擇恢復日期'); return; }
+  const pauseUntil = raw.replaceAll('-', '/');
+  closePauseModal();
+  const c = allClients.find(x => x._row === pauseRow);
+  if (isDemo) {
+    if (c) { c.status = '暫停'; c.notes = (c.notes ? c.notes + ' / ' : '') + `【暫停至${pauseUntil}】`; }
+    renderAll(); showToast(`已暫停（示範模式）`); return;
+  }
+  try {
+    await fetch(SCRIPT_URL, { method:'POST', body: JSON.stringify({
+      action:'pauseClient', rowIndex: pauseRow, pauseUntil,
+      id: c?.id, dog: c?.dog, trainer: c?.trainer
+    }) }).then(r=>r.json());
+    if (c) {
+      c.status = '暫停';
+      const cur = (c.notes||'').replace(/【暫停至[^】]*】\s*\/?\s*/g,'').trim().replace(/\s*\/\s*$/,'');
+      c.notes = cur ? cur + ` / 【暫停至${pauseUntil}】` : `【暫停至${pauseUntil}】`;
+    }
+    renderAll(); showToast(`✓ 已暫停 ${c?.dog}，預計恢復 ${pauseUntil}`);
+  } catch (err) { showToast(`⚠️ ${err.message}`); }
+}
+
+async function resumeClient(rowIndex) {
+  const c = allClients.find(x => x._row === rowIndex);
+  if (!c) return;
+  closeModal();
+  if (isDemo) { if (c) { c.status = '進行中'; c.notes = (c.notes||'').replace(/【暫停至[^】]*】\s*\/?\s*/g,'').trim(); } renderAll(); showToast('已恢復（示範模式）'); return; }
+  try {
+    await fetch(SCRIPT_URL, { method:'POST', body: JSON.stringify({ action:'updateStatus', rowIndex, status:'進行中' }) }).then(r=>r.json());
+    if (c) { c.status = '進行中'; c.notes = (c.notes||'').replace(/【暫停至[^】]*】\s*\/?\s*/g,'').trim(); }
+    renderAll(); showToast(`✓ 已恢復 ${c?.dog} 課程`);
+  } catch (err) { showToast(`⚠️ ${err.message}`); }
+}
+
+// ── Archive toggle ─────────────────────────────────────────────
+function toggleArchived() {
+  showArchived = !showArchived;
+  renderClients();
 }
 
 async function addManualLesson(rowIndex) {

@@ -2162,7 +2162,7 @@ function renderDashboard() {
     <div class="dash-trainer-chips">
       <button class="dash-trainer-chip ${dashTrainer==='all'?'active':''}" onclick="setDashTrainer('all')">全部</button>
       ${dataTrainers.map(t => `
-        <button class="dash-trainer-chip ${dashTrainer===t?'active':''}" onclick="setDashTrainer(${JSON.stringify(t)})">${esc(t)}</button>
+        <button class="dash-trainer-chip ${dashTrainer===t?'active':''}" data-trainer="${esc(t)}" onclick="setDashTrainer(this.dataset.trainer)">${esc(t)}</button>
       `).join('')}
     </div>
   </div>

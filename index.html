@@ -1450,33 +1450,26 @@ function ncLookupById(val) {
     const v = val.trim();
     if (!v) { hint.className = 'nc-lookup-hint'; return; }
 
-    // Search existing clients by ID
     const matches = allClients.filter(c => c.id === v);
     if (matches.length === 0) { hint.className = 'nc-lookup-hint'; return; }
 
-    const c = matches[matches.length - 1]; // most recent if duplicates
-    hint.className = 'nc-lookup-hint show';
-    hint.innerHTML = `找到現有客戶：<strong>${esc(c.dog)}</strong>（飼主：${esc(c.owner||'—')}）
-      <button onclick="ncAutoFill()" style="margin-left:10px;background:var(--accent);color:#fff;border:none;border-radius:6px;padding:3px 10px;font-size:11px;font-weight:700;cursor:pointer;">自動填入</button>`;
-    hint._client = c;
-  }, 300);
-}
+    const c = matches[matches.length - 1];
 
-function ncAutoFill() {
-  const hint = document.getElementById('nc-lookup-hint');
-  const c = hint._client;
-  if (!c) return;
-  const fill = (id, val) => {
-    const el = document.getElementById(id);
-    el.value = val || '';
-    if (val) el.classList.add('filled'); else el.classList.remove('filled');
-  };
-  fill('nc-dog',     c.dog);
-  fill('nc-owner',   c.owner);
-  fill('nc-email',   c.email);
-  fill('nc-address', c.address);
-  if (c.trainer) document.getElementById('nc-trainer').value = c.trainer;
-  hint.innerHTML = hint.innerHTML.replace(/<button.*<\/button>/, '✓ 已自動填入');
+    // 直接自動填入，欄位仍可手動修改
+    const fill = (id, val) => {
+      const el = document.getElementById(id);
+      el.value = val || '';
+      el.classList.toggle('filled', !!(val));
+    };
+    fill('nc-dog',     c.dog);
+    fill('nc-owner',   c.owner);
+    fill('nc-email',   c.email);
+    fill('nc-address', c.address);
+    if (c.trainer) document.getElementById('nc-trainer').value = c.trainer;
+
+    hint.className = 'nc-lookup-hint show';
+    hint.textContent = `✓ 找到「${c.dog}」（飼主：${c.owner||'—'}），資料已自動填入，可直接修改`;
+  }, 300);
 }
 
 function ncPlanChanged(plan) {

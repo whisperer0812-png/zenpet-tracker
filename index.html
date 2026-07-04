@@ -1696,14 +1696,29 @@ function ncLookupById(val) {
   _ncLookupTimer = setTimeout(() => {
     const hint = document.getElementById('nc-lookup-hint');
     const v = val.trim();
-    if (!v) { hint.className = 'nc-lookup-hint'; return; }
+    if (!v) { hint.className = 'nc-lookup-hint'; hint.textContent = ''; return; }
 
-    const matches = allClients.filter(c => c.id === v);
-    if (matches.length === 0) { hint.className = 'nc-lookup-hint'; return; }
+    // 寬鬆比對：忽略前後空白、字串/數字都接受
+    const matches = allClients.filter(c =>
+      String(c.id).trim() === v || Number(c.id) === Number(v)
+    );
 
-    const c = matches[matches.length - 1];
+    if (matches.length === 0) {
+      hint.className = 'nc-lookup-hint show';
+      hint.style.borderColor = '#f0a500';
+      hint.style.background  = '#fff8e6';
+      hint.style.color       = '#92400e';
+      hint.textContent       = `找不到編號「${v}」，請確認後手動填寫，或這是全新客戶`;
+      return;
+    }
 
-    // 直接自動填入，欄位仍可手動修改
+    // 重置顏色（找到時用綠色）
+    hint.style.borderColor = 'var(--accent)';
+    hint.style.background  = '#f0faf5';
+    hint.style.color       = 'var(--accent)';
+
+    const c = matches[matches.length - 1]; // 多期時取最新一筆
+
     const fill = (id, val) => {
       const el = document.getElementById(id);
       el.value = val || '';

@@ -79,6 +79,21 @@
     }
     .banner-close { color: inherit; opacity: 0.5; cursor: pointer; flex-shrink: 0; font-size: 16px; line-height: 1; }
 
+    /* ── Integration status bar ── */
+    .integration-bar {
+      margin: 8px 18px 0; padding: 7px 14px;
+      background: #f8f9fa; border: 1px solid #e9ecef;
+      border-radius: var(--radius-sm); font-size: 11px;
+      display: flex; align-items: center; gap: 5px;
+    }
+    .int-dot {
+      display: inline-block; width: 8px; height: 8px;
+      border-radius: 50%; background: #ccc; margin-right: 4px;
+      flex-shrink: 0;
+    }
+    .int-dot.ok  { background: #27ae60; box-shadow: 0 0 4px rgba(39,174,96,0.5); }
+    .int-dot.err { background: #e74c3c; }
+
     /* ── Stats ── */
     .stats-row {
       display: grid; grid-template-columns: repeat(3, 1fr);
@@ -1012,8 +1027,21 @@
     <button class="refresh-btn" id="refresh-btn" onclick="loadData()">
       <span class="icon">↻</span> 重新整理
     </button>
+    <button class="refresh-btn" id="init-btn" onclick="initIntegration()" title="設定表單與日曆自動同步觸發器（只需按一次）" style="display:none;">
+      ⚙️ 初始化整合
+    </button>
   </div>
 </header>
+
+<!-- 整合狀態列 -->
+<div id="integration-bar" class="integration-bar" style="display:none;">
+  <span id="int-cal-dot" class="int-dot"></span><span id="int-cal-label">日曆自動同步</span>
+  <span style="margin:0 10px;color:#ccc">|</span>
+  <span id="int-form-dot" class="int-dot"></span><span id="int-form-label">表單自動建案</span>
+  <span style="margin:0 10px;color:#ccc">|</span>
+  <span id="int-time-label" style="color:#999;font-size:11px;"></span>
+  <button onclick="initIntegration()" id="int-init-btn" style="display:none;margin-left:12px;padding:2px 10px;font-size:11px;border:1.5px solid #e67e22;border-radius:6px;background:white;color:#e67e22;cursor:pointer;font-weight:700;">⚙️ 點此初始化</button>
+</div>
 
 <div id="setup-banner" class="setup-banner" style="display:none;">
   <span>⚙️ <strong>示範模式</strong> — 目前顯示範例資料。連接 Google 試算表請將 <code>SCRIPT_URL</code> 替換為 Apps Script 部署網址。</span>
@@ -1485,6 +1513,7 @@ function startApp() {
     renderAll();
   } else {
     loadData();
+    checkSystemStatus(); // 背景檢查整合狀態
   }
 }
 
@@ -1545,6 +1574,52 @@ function compressImage(file, maxPx) {
 }
 
 window.addEventListener('DOMContentLoaded', initAuth);
+
+// ── 系統整合狀態 ────────────────────────────────────────────
+async function checkSystemStatus() {
+  if (isDemo) return;
+  try {
+    const j = await fetch(SCRIPT_URL + '?action=status').then(r => r.json());
+    if (!j.success) return;
+    const s = j;
+    const bar = document.getElementById('integration-bar');
+    bar.style.display = 'flex';
+
+    const setDot = (id, ok, label, okText, errText) => {
+      document.getElementById(id).className = 'int-dot ' + (ok ? 'ok' : 'err');
+      document.getElementById(label).textContent = ok ? okText : errText;
+    };
+    setDot('int-cal-dot',  s.calendarTrigger, 'int-cal-label',  '日曆每15分鐘自動同步 ✓', '日曆自動同步未啟用 ✗');
+    setDot('int-form-dot', s.formTrigger,     'int-form-label', '表單新報名自動建案 ✓',   '表單自動建案未啟用 ✗');
+
+    document.getElementById('int-time-label').textContent = '狀態更新：' + s.timestamp;
+
+    const needsInit = !s.calendarTrigger || !s.formTrigger;
+    document.getElementById('init-btn').style.display   = needsInit ? '' : 'none';
+    document.getElementById('int-init-btn').style.display = needsInit ? '' : 'none';
+  } catch(e) { /* 靜默失敗 */ }
+}
+
+async function initIntegration() {
+  if (isDemo) { showToast('Demo 模式不支援初始化'); return; }
+  const btn = document.getElementById('init-btn');
+  btn.disabled = true;
+  btn.textContent = '⚙️ 設定中…';
+  try {
+    const j = await fetch(SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'setupTriggers' })
+    }).then(r => r.json());
+    if (!j.success) throw new Error(j.error);
+    showToast('✓ 整合設定完成！表單自動建案、日曆每15分鐘自動同步已啟用');
+    await checkSystemStatus();
+  } catch(e) {
+    showToast('⚠️ 初始化失敗：' + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '⚙️ 初始化整合';
+  }
+}
 
 async function syncCalendar() {
   if (isDemo) { showToast('Demo 模式不支援日曆同步'); return; }

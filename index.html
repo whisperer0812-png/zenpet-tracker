@@ -384,6 +384,13 @@
     }
     .btn-add-lesson:hover { background: var(--accent); color: white; }
 
+    /* Map link */
+    .map-link {
+      color: var(--accent); text-decoration: none;
+      font-weight: 500; word-break: break-all;
+    }
+    .map-link:hover { text-decoration: underline; }
+
     /* Client ID badge */
     .client-id {
       font-size: 11px; font-weight: 700; color: var(--muted);
@@ -1346,6 +1353,7 @@ function renderCard(c, idx = 0) {
 
   const footerRows = [];
   if (lastLesson) footerRows.push(`<div class="info-row">📅 最後上課：<span class="last-lesson-hl">${esc(lastLesson.date)}${lastLesson.time ? ' ' + esc(lastLesson.time) : ''}</span></div>`);
+  if (c.address)  footerRows.push(`<div class="info-row">📍 <a class="map-link" href="https://maps.google.com/?q=${encodeURIComponent(c.address)}" target="_blank" onclick="event.stopPropagation()">${esc(c.address)}</a></div>`);
   if (c.notes)    footerRows.push(`<div class="info-row">📝 ${esc(c.notes)}</div>`);
   if (c.absences?.length) footerRows.push(`<div class="info-row">🗓 請假：${c.absences.map(a=>esc(a)).join(' · ')}</div>`);
 
@@ -1579,6 +1587,13 @@ function openModal(rowIndex) {
         <div class="modal-label">備註</div>
         <textarea id="modal-notes" rows="3">${esc(c.notes||'')}</textarea>
       </div>
+      <div class="modal-field">
+        <div class="modal-label">訓練地址</div>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <input type="text" id="modal-address" value="${esc(c.address||'')}" placeholder="輸入地址，可直接開啟 Google Maps" style="flex:1;border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:9px 12px;font-size:14px;font-family:inherit;outline:none;color:var(--text);">
+          ${c.address ? `<a href="https://maps.google.com/?q=${encodeURIComponent(c.address)}" target="_blank" style="font-size:20px;text-decoration:none;" title="開啟 Google Maps">📍</a>` : ''}
+        </div>
+      </div>
     </div>
     <div class="modal-section">
       <div class="modal-section-title">課程紀錄（${realCount} 堂 · ${absenceItems.length} 請假${forceCount ? ' · ' + forceCount + ' 不可抗力' : ''}）</div>
@@ -1651,7 +1666,7 @@ async function saveModal() {
 
   if (isDemo) {
     if (c) {
-      c.status = status; c.notes = notes;
+      c.status = status; c.notes = notes; c.address = address;
       lessonEdits.forEach(e => {
         const l = (c.lessonDates||[]).find(l => l.date === e.origDate);
         if (l) { l.date = e.newDate; l.time = e.newTime; l.type = e.newType; }
@@ -1664,9 +1679,11 @@ async function saveModal() {
     renderAll(); showToast('已更新（示範模式）'); return;
   }
 
+  const address = document.getElementById('modal-address')?.value || '';
   const tasks = [];
-  if (status !== c.status) tasks.push({ action:'updateStatus', rowIndex:modalRow, status });
-  if (notes  !== c.notes)  tasks.push({ action:'updateNotes',  rowIndex:modalRow, notes });
+  if (status  !== c.status)   tasks.push({ action:'updateStatus',  rowIndex:modalRow, status });
+  if (notes   !== c.notes)    tasks.push({ action:'updateNotes',   rowIndex:modalRow, notes });
+  if (address !== (c.address||'')) tasks.push({ action:'updateAddress', rowIndex:modalRow, address });
   lessonEdits.forEach(e => tasks.push({
     action:'updateLessonDate', id:c.id, dog:c.dog,
     origDate:e.origDate, newDate:e.newDate, newTime:e.newTime, newType:e.newType
@@ -1679,7 +1696,7 @@ async function saveModal() {
       fetch(SCRIPT_URL, {method:'POST', body:JSON.stringify(t)}).then(r=>r.json())
     ));
     if (c) {
-      c.status = status; c.notes = notes;
+      c.status = status; c.notes = notes; c.address = address;
       lessonEdits.forEach(e => {
         const l = (c.lessonDates||[]).find(l => l.date === e.origDate);
         if (l) { l.date = e.newDate; l.time = e.newTime; l.type = e.newType; }

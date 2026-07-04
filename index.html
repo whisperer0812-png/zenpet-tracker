@@ -429,6 +429,57 @@
       font-size: 15px; cursor: pointer; font-weight: 500;
     }
 
+    /* ── New Client Modal ── */
+    .nc-overlay {
+      display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45);
+      z-index: 700; align-items: flex-end; justify-content: center;
+    }
+    .nc-overlay.open { display: flex; }
+    .nc-modal {
+      background: var(--white); border-radius: var(--radius) var(--radius) 0 0;
+      width: 100%; max-width: 540px; padding: 24px 22px 36px;
+      max-height: 90vh; overflow-y: auto;
+    }
+    .nc-title { font-size: 18px; font-weight: 900; margin-bottom: 2px; }
+    .nc-sub   { font-size: 12px; color: var(--muted); margin-bottom: 20px; }
+    .nc-group { margin-bottom: 18px; }
+    .nc-group-title {
+      font-size: 10px; font-weight: 700; color: var(--muted);
+      letter-spacing: 0.08em; text-transform: uppercase;
+      margin-bottom: 10px; padding-bottom: 6px;
+      border-bottom: 1px solid var(--border-light);
+    }
+    .nc-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+    .nc-row.full { grid-template-columns: 1fr; }
+    .nc-field { display: flex; flex-direction: column; gap: 4px; }
+    .nc-label { font-size: 11px; font-weight: 700; color: var(--muted); }
+    .nc-input {
+      border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+      padding: 10px 12px; font-size: 14px; font-family: inherit;
+      outline: none; color: var(--text); width: 100%; box-sizing: border-box;
+    }
+    .nc-input:focus { border-color: var(--accent); }
+    .nc-input.filled { background: #f0faf5; border-color: var(--accent); }
+    .nc-lookup-hint {
+      display: none; margin-top: -6px; margin-bottom: 8px;
+      background: #f0faf5; border: 1.5px solid var(--accent);
+      border-radius: 8px; padding: 10px 12px;
+      font-size: 12px; color: var(--accent); font-weight: 600;
+    }
+    .nc-lookup-hint.show { display: block; }
+    .nc-btns { display: flex; gap: 10px; margin-top: 20px; }
+    .nc-add-btn {
+      background: var(--accent); color: white; border: none;
+      border-radius: var(--radius-sm); padding: 7px 14px;
+      cursor: pointer; font-size: 12px; font-weight: 700;
+      display: flex; align-items: center; gap: 5px;
+      transition: all 0.15s; white-space: nowrap;
+    }
+    .nc-add-btn:hover { background: #2c6e57; }
+    @media (max-width: 600px) {
+      .nc-row { grid-template-columns: 1fr; }
+    }
+
     /* Empty / Loading */
     .empty-state {
       grid-column: 1 / -1; text-align: center;
@@ -882,6 +933,7 @@
       <button class="logout-btn" onclick="logout()" title="登出">登出</button>
     </div>
     <button class="view-toggle-btn" id="view-toggle" onclick="toggleView()">📊 儀表板</button>
+    <button class="nc-add-btn" onclick="openNewClientModal()" title="新增客戶案例">＋ 新案例</button>
     <button class="refresh-btn" id="cal-sync-btn" onclick="syncCalendar()" title="從各訓練師 Google 日曆拉取近30天上課紀錄">
       <span class="icon">🗓</span> 同步日曆
     </button>
@@ -993,6 +1045,109 @@
     <div class="date-modal-btns">
       <button class="btn-cancel" onclick="closePauseModal()">取消</button>
       <button class="btn-primary" id="pause-confirm-btn" style="background:var(--yellow);color:#000;">確認暫停</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── New Client Modal ── -->
+<div class="nc-overlay" id="nc-modal" onclick="closeNewClientModal(event)">
+  <div class="nc-modal">
+    <div class="nc-title">＋ 新增客戶案例</div>
+    <div class="nc-sub">填入編號後自動帶入已有資料；方案選定後自動填入堂數</div>
+
+    <!-- 編號 lookup -->
+    <div class="nc-group">
+      <div class="nc-group-title">客戶識別</div>
+      <div class="nc-row">
+        <div class="nc-field">
+          <label class="nc-label">編號 *</label>
+          <input class="nc-input" id="nc-id" type="text" placeholder="例：188" oninput="ncLookupById(this.value)">
+        </div>
+        <div class="nc-field">
+          <label class="nc-label">狗狗名字 *</label>
+          <input class="nc-input" id="nc-dog" type="text" placeholder="例：大海 Ocean">
+        </div>
+      </div>
+      <div class="nc-lookup-hint" id="nc-lookup-hint"></div>
+      <div class="nc-row">
+        <div class="nc-field">
+          <label class="nc-label">飼主姓名</label>
+          <input class="nc-input" id="nc-owner" type="text" placeholder="例：王小明">
+        </div>
+        <div class="nc-field">
+          <label class="nc-label">Email</label>
+          <input class="nc-input" id="nc-email" type="email" placeholder="example@mail.com">
+        </div>
+      </div>
+      <div class="nc-row full">
+        <div class="nc-field">
+          <label class="nc-label">地址（選填）</label>
+          <input class="nc-input" id="nc-address" type="text" placeholder="訓練地點或住家地址">
+        </div>
+      </div>
+    </div>
+
+    <!-- 課程方案 -->
+    <div class="nc-group">
+      <div class="nc-group-title">課程方案</div>
+      <div class="nc-row">
+        <div class="nc-field">
+          <label class="nc-label">方案 *</label>
+          <select class="nc-input" id="nc-plan" onchange="ncPlanChanged(this.value)">
+            <option value="">請選擇</option>
+            <option value="A方案">A 方案（16 堂）</option>
+            <option value="B方案">B 方案（30 堂）</option>
+            <option value="D方案">D 方案（自填）</option>
+            <option value="行為諮詢">行為諮詢</option>
+            <option value="其他">其他</option>
+          </select>
+        </div>
+        <div class="nc-field">
+          <label class="nc-label">週期／備註</label>
+          <input class="nc-input" id="nc-period" type="text" placeholder="例：每週一、三">
+        </div>
+      </div>
+      <div class="nc-row">
+        <div class="nc-field">
+          <label class="nc-label">上課總堂數</label>
+          <input class="nc-input" id="nc-class-total" type="number" min="0" placeholder="0">
+        </div>
+        <div class="nc-field">
+          <label class="nc-label">代訓總堂數（選填）</label>
+          <input class="nc-input" id="nc-train-total" type="number" min="0" placeholder="0">
+        </div>
+      </div>
+    </div>
+
+    <!-- 訓練師與時間 -->
+    <div class="nc-group">
+      <div class="nc-group-title">訓練師與開始日期</div>
+      <div class="nc-row">
+        <div class="nc-field">
+          <label class="nc-label">負責訓練師 *</label>
+          <select class="nc-input" id="nc-trainer">
+            <option value="">請選擇</option>
+            <option value="大廷 DaTing">大廷 DaTing</option>
+            <option value="羊桃 Sheepeach">羊桃 Sheepeach</option>
+            <option value="小褚 Henry">小褚 Henry</option>
+          </select>
+        </div>
+        <div class="nc-field">
+          <label class="nc-label">開始日期</label>
+          <input class="nc-input" id="nc-start-date" type="date">
+        </div>
+      </div>
+      <div class="nc-row full">
+        <div class="nc-field">
+          <label class="nc-label">備註</label>
+          <input class="nc-input" id="nc-notes" type="text" placeholder="任何補充說明">
+        </div>
+      </div>
+    </div>
+
+    <div class="nc-btns">
+      <button class="btn-cancel" onclick="closeNewClientModal()">取消</button>
+      <button class="btn-primary" id="nc-submit-btn" onclick="submitNewClient()">✓ 新增客戶</button>
     </div>
   </div>
 </div>
@@ -1258,6 +1413,120 @@ async function fixCounts(btn) {
   } finally {
     btn.disabled = false;
     btn.textContent = orig;
+  }
+}
+
+// ── New Client Modal ──────────────────────────────────────────
+const PLAN_DEFAULTS = { 'A方案': 16, 'B方案': 30 };
+
+function openNewClientModal() {
+  // Reset form
+  ['nc-id','nc-dog','nc-owner','nc-email','nc-address','nc-period','nc-notes'].forEach(id => {
+    document.getElementById(id).value = '';
+    document.getElementById(id).classList.remove('filled');
+  });
+  document.getElementById('nc-plan').value = '';
+  document.getElementById('nc-trainer').value = '';
+  document.getElementById('nc-class-total').value = '';
+  document.getElementById('nc-train-total').value = '';
+  document.getElementById('nc-start-date').value = '';
+  document.getElementById('nc-lookup-hint').className = 'nc-lookup-hint';
+  document.getElementById('nc-lookup-hint').textContent = '';
+  document.getElementById('nc-submit-btn').disabled = false;
+  document.getElementById('nc-submit-btn').textContent = '✓ 新增客戶';
+  document.getElementById('nc-modal').classList.add('open');
+}
+
+function closeNewClientModal(e) {
+  if (e && e.target !== document.getElementById('nc-modal')) return;
+  document.getElementById('nc-modal').classList.remove('open');
+}
+
+let _ncLookupTimer = null;
+function ncLookupById(val) {
+  clearTimeout(_ncLookupTimer);
+  _ncLookupTimer = setTimeout(() => {
+    const hint = document.getElementById('nc-lookup-hint');
+    const v = val.trim();
+    if (!v) { hint.className = 'nc-lookup-hint'; return; }
+
+    // Search existing clients by ID
+    const matches = allClients.filter(c => c.id === v);
+    if (matches.length === 0) { hint.className = 'nc-lookup-hint'; return; }
+
+    const c = matches[matches.length - 1]; // most recent if duplicates
+    hint.className = 'nc-lookup-hint show';
+    hint.innerHTML = `找到現有客戶：<strong>${esc(c.dog)}</strong>（飼主：${esc(c.owner||'—')}）
+      <button onclick="ncAutoFill()" style="margin-left:10px;background:var(--accent);color:#fff;border:none;border-radius:6px;padding:3px 10px;font-size:11px;font-weight:700;cursor:pointer;">自動填入</button>`;
+    hint._client = c;
+  }, 300);
+}
+
+function ncAutoFill() {
+  const hint = document.getElementById('nc-lookup-hint');
+  const c = hint._client;
+  if (!c) return;
+  const fill = (id, val) => {
+    const el = document.getElementById(id);
+    el.value = val || '';
+    if (val) el.classList.add('filled'); else el.classList.remove('filled');
+  };
+  fill('nc-dog',     c.dog);
+  fill('nc-owner',   c.owner);
+  fill('nc-email',   c.email);
+  fill('nc-address', c.address);
+  if (c.trainer) document.getElementById('nc-trainer').value = c.trainer;
+  hint.innerHTML = hint.innerHTML.replace(/<button.*<\/button>/, '✓ 已自動填入');
+}
+
+function ncPlanChanged(plan) {
+  const def = PLAN_DEFAULTS[plan];
+  if (def !== undefined) document.getElementById('nc-class-total').value = def;
+}
+
+async function submitNewClient() {
+  if (isDemo) { showToast('Demo 模式不支援新增客戶'); return; }
+  const get = id => document.getElementById(id).value.trim();
+
+  const id      = get('nc-id');
+  const dog     = get('nc-dog');
+  const trainer = get('nc-trainer');
+  if (!id)      { showToast('請填入編號'); return; }
+  if (!dog)     { showToast('請填入狗狗名字'); return; }
+  if (!trainer) { showToast('請選擇負責訓練師'); return; }
+
+  const btn = document.getElementById('nc-submit-btn');
+  btn.disabled = true;
+  btn.textContent = '新增中…';
+
+  try {
+    const json = await fetch(SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify({
+        action:     'addClient',
+        id,
+        dog,
+        owner:      get('nc-owner'),
+        email:      get('nc-email'),
+        address:    get('nc-address'),
+        plan:       get('nc-plan'),
+        period:     get('nc-period'),
+        classTotal: Number(get('nc-class-total')) || 0,
+        trainTotal: Number(get('nc-train-total')) || 0,
+        trainer,
+        startDate:  get('nc-start-date').replaceAll('-', '/'),
+        notes:      get('nc-notes'),
+      })
+    }).then(r => r.json());
+
+    if (!json.success) throw new Error(json.error);
+    showToast(`✓ ${dog} 已新增！`);
+    document.getElementById('nc-modal').classList.remove('open');
+    loadData();
+  } catch (err) {
+    showToast(`⚠️ 新增失敗：${err.message}`);
+    btn.disabled = false;
+    btn.textContent = '✓ 新增客戶';
   }
 }
 

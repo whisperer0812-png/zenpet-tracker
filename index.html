@@ -1325,8 +1325,8 @@ function renderCard(c, idx = 0) {
   const combinedPct = totalTotal > 0 ? Math.min(100, Math.round(totalDone / totalTotal * 100)) : 0;
   const rbText2     = done ? '結課' : `剩 ${c.classLeft} 堂`;
   const breakdown   = c.trainTotal > 0
-    ? `上課 ${c.classDone}/${c.classTotal} &nbsp;|&nbsp; 代訓 ${c.trainDone}/${c.trainTotal}`
-    : `上課 ${c.classDone}/${c.classTotal}`;
+    ? `上課 ${c.classDone} 堂 &nbsp;|&nbsp; 代訓 ${c.trainDone} 堂`
+    : `上課 ${c.classDone} 堂`;
 
   // Contract date range
   const endDate  = calcEndDate(c.startDate, c.plan);

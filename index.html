@@ -206,6 +206,39 @@
     .badge-active  { background: #daeee6; color: #1b6a4a; }
     .badge-paused  { background: var(--gray-bg); color: #666; }
     .badge-done    { background: var(--gray-bg); color: #999; }
+    .badge-period  { background: #fef3c7; color: #92400e; font-weight: 800; }
+
+    /* ── History view ── */
+    #history-view { padding: 0 18px 40px; display: none; }
+    .hist-search-bar {
+      display: flex; align-items: center; gap: 10px;
+      margin-bottom: 18px; padding: 12px 16px;
+      background: var(--white); border: 1px solid var(--border);
+      border-radius: var(--radius);
+    }
+    .hist-search-bar input {
+      flex: 1; border: none; outline: none;
+      font-size: 14px; font-family: inherit; color: var(--text);
+      background: transparent;
+    }
+    .hist-section-title {
+      font-size: 10px; font-weight: 700; color: var(--muted);
+      letter-spacing: 0.08em; text-transform: uppercase;
+      margin-bottom: 10px; padding-bottom: 6px;
+      border-bottom: 1px solid var(--border-light);
+    }
+    .hist-row {
+      background: var(--white); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 14px 16px;
+      margin-bottom: 8px; cursor: pointer;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .hist-row:hover { border-color: var(--accent); box-shadow: 0 2px 8px rgba(58,134,100,.1); }
+    .hist-main { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; margin-bottom: 6px; }
+    .hist-id   { font-size: 11px; color: var(--muted); font-weight: 600; }
+    .hist-dog  { font-size: 15px; font-weight: 800; }
+    .hist-meta { display: flex; gap: 12px; flex-wrap: wrap; font-size: 12px; color: var(--muted); }
+    .hist-meta span { display: flex; align-items: center; gap: 3px; }
 
     /* Progress */
     .card-progress { padding: 2px 14px 10px 20px; }
@@ -933,6 +966,7 @@
       <button class="logout-btn" onclick="logout()" title="登出">登出</button>
     </div>
     <button class="view-toggle-btn" id="view-toggle" onclick="toggleView()">📊 儀表板</button>
+    <button class="view-toggle-btn" id="hist-toggle" onclick="toggleHistory()" title="查看已結課和中斷的客戶">📁 歷史</button>
     <button class="nc-add-btn" onclick="openNewClientModal()" title="新增客戶案例">＋ 新案例</button>
     <button class="refresh-btn" id="cal-sync-btn" onclick="syncCalendar()" title="從各訓練師 Google 日曆拉取近30天上課紀錄">
       <span class="icon">🗓</span> 同步日曆
@@ -993,6 +1027,14 @@
 </div>
 <div id="clients-grid" class="clients-grid" style="display:none;"></div>
 <div id="dashboard" class="dashboard"></div>
+<div id="history-view">
+  <div class="hist-search-bar">
+    <span style="font-size:16px;">🔍</span>
+    <input id="hist-search" type="text" placeholder="搜尋狗名、飼主、編號…" oninput="renderHistory()">
+  </div>
+  <div class="hist-section-title" id="hist-count"></div>
+  <div id="hist-list"></div>
+</div>
 
 <!-- ── Date Confirm Modal ── -->
 <div class="date-modal-overlay" id="date-modal" onclick="closeDateModal(event)">
@@ -1768,16 +1810,30 @@ async function loadData() {
 function renderAll() {
   document.getElementById('loading-state').style.display = 'none';
   renderStats();
+  const grid    = document.getElementById('clients-grid');
+  const dash    = document.getElementById('dashboard');
+  const hist    = document.getElementById('history-view');
+  const secGrp  = document.querySelector('.section-group');
+  const alerts  = document.getElementById('alert-section');
+  const pAlerts = document.getElementById('pause-alert-section');
+
+  // hide all panels first
+  grid.style.display = 'none';
+  dash.style.display = 'none';
+  hist.style.display = 'none';
+  if (secGrp)  secGrp.style.display  = 'none';
+  if (alerts)  alerts.style.display  = 'none';
+  if (pAlerts) pAlerts.style.display = 'none';
+
   if (currentView === 'dashboard') {
-    document.getElementById('clients-grid').style.display = 'none';
-    document.querySelector('.section-group').style.display = 'none';
-    const as = document.getElementById('alert-section'); if (as) as.style.display = 'none';
-    document.getElementById('dashboard').style.display = 'block';
+    dash.style.display = 'block';
     renderDashboard();
+  } else if (currentView === 'history') {
+    hist.style.display = 'block';
+    renderHistory();
   } else {
-    document.getElementById('clients-grid').style.display = 'grid';
-    document.querySelector('.section-group').style.display = '';
-    document.getElementById('dashboard').style.display = 'none';
+    grid.style.display = 'grid';
+    if (secGrp) secGrp.style.display = '';
     renderAlerts(); renderTrainerTabs(); renderClients();
   }
 }
@@ -1864,14 +1920,32 @@ function renderTrainerTabs() {
   ].join('');
 }
 
+// 計算每隻狗的第幾期（行為諮詢和保母不計入）
+function buildPeriodMap(clients) {
+  const SKIP = ['行為諮詢', '保母'];
+  const groups = {};
+  clients.forEach(c => {
+    if (SKIP.some(p => (c.plan||'').includes(p))) return;
+    const key = c.id || c.dog;
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(c);
+  });
+  const map = {}; // _row → { periodNum, totalPeriods }
+  Object.values(groups).forEach(grp => {
+    grp.sort((a, b) => (a.startDate||'').localeCompare(b.startDate||''));
+    grp.forEach((c, i) => { map[c._row] = { periodNum: i + 1, totalPeriods: grp.length }; });
+  });
+  return map;
+}
+
 function renderClients() {
+  const periodMap = buildPeriodMap(allClients);
   let list = allClients.slice();
   if (activeTrainer !== 'all') list = list.filter(c => c.trainer === activeTrainer);
   if (activeStatus  !== 'all') {
     if (activeStatus === '結課') list = list.filter(c => c.status === '已結課' || c.classLeft === 0);
     else list = list.filter(c => c.status === activeStatus);
   }
-  // Hide archived ('已結課') by default unless showArchived is on or user explicitly filtered to '結課'
   if (!showArchived && activeStatus !== '結課') {
     list = list.filter(c => c.status !== '已結課');
   }
@@ -1883,14 +1957,116 @@ function renderClients() {
     return 0;
   });
   const grid = document.getElementById('clients-grid');
-  grid.innerHTML = list.length ? list.map((c, i) => renderCard(c, i)).join('') : '<div class="empty-state">沒有符合條件的客戶</div>';
-  // Update archive toggle button label
+  grid.innerHTML = list.length
+    ? list.map((c, i) => renderCard(c, i, periodMap[c._row])).join('')
+    : '<div class="empty-state">沒有符合條件的客戶</div>';
   const archivedCount = allClients.filter(c => c.status === '已結課').length;
   const btn = document.getElementById('archive-toggle-btn');
   if (btn) btn.textContent = showArchived ? `隱藏結課（${archivedCount}）` : `顯示結課（${archivedCount}）`;
 }
 
-function renderCard(c, idx = 0) {
+// 歷史頁面
+function renderHistory() {
+  const q    = (document.getElementById('hist-search')?.value || '').trim().toLowerCase();
+  const periodMap = buildPeriodMap(allClients);
+  let list = allClients.filter(c => c.status === '已結課');
+  if (q) list = list.filter(c =>
+    (c.dog||'').toLowerCase().includes(q) ||
+    (c.owner||'').toLowerCase().includes(q) ||
+    (c.id||'').includes(q) ||
+    (c.trainer||'').toLowerCase().includes(q)
+  );
+  list.sort((a, b) => {
+    const ea = calcEndDate(a.startDate, a.plan) || a.startDate || '';
+    const eb = calcEndDate(b.startDate, b.plan) || b.startDate || '';
+    return eb.localeCompare(ea); // 最近結課的在前
+  });
+  const countEl = document.getElementById('hist-count');
+  if (countEl) countEl.textContent = `共 ${list.length} 筆結課紀錄`;
+  const listEl = document.getElementById('hist-list');
+  if (!listEl) return;
+  listEl.innerHTML = list.length === 0
+    ? '<div class="empty-state">沒有已結課的客戶</div>'
+    : list.map(c => {
+        const pi  = periodMap[c._row];
+        const end = calcEndDate(c.startDate, c.plan);
+        const periodBadge = pi && pi.totalPeriods > 1
+          ? `<span class="badge badge-period">第${pi.periodNum}期</span>` : '';
+        const planKey = (c.plan||'').match(/[ABD]/)?.[0] || (c.plan?.includes('諮') ? '諮' : 'other');
+        const owner = (c.owner||'').split('/')[0].trim();
+        const dates = (c.lessonDates||[]).filter(d=>d.date).sort((a,b)=>b.date.localeCompare(a.date));
+        const lastDate = dates[0]?.date || '';
+        return `<div class="hist-row" onclick="showClientLessons(${c._row})">
+          <div class="hist-main">
+            ${c.id ? `<span class="hist-id">#${esc(c.id)}</span>` : ''}
+            <span class="hist-dog">${esc(c.dog)}</span>
+            ${periodBadge}
+            <span class="badge badge-plan-${planKey}">${esc(c.plan||'—')}</span>
+          </div>
+          <div class="hist-meta">
+            ${owner ? `<span>👤 ${esc(owner)}</span>` : ''}
+            <span>🧑‍🏫 ${esc(c.trainer)}</span>
+            ${c.startDate ? `<span>📅 ${esc(c.startDate)}${end?' → '+esc(end):''}</span>` : ''}
+            <span>✓ ${c.classDone + c.trainDone} 堂完成</span>
+            ${lastDate ? `<span>最後上課：${esc(lastDate)}</span>` : ''}
+            ${c.notes ? `<span>📝 ${esc(c.notes)}</span>` : ''}
+          </div>
+        </div>`;
+      }).join('');
+}
+
+// 點歷史列，用 breakdown modal 顯示該客戶的所有上課紀錄
+function showClientLessons(row) {
+  const c = allClients.find(x => x._row === row);
+  if (!c) return;
+  _selectedLessons = {};
+  updateBreakdownSelBar();
+
+  const lessons = (c.lessonDates||[])
+    .filter(d => d.date)
+    .map(d => ({ ...d, dog: c.dog, trainer: c.trainer, clientRow: row }))
+    .sort((a, b) => a.date.localeCompare(b.date));
+
+  document.getElementById('breakdown-modal-title').textContent = `${c.dog} 的上課紀錄`;
+  document.getElementById('breakdown-modal-sub').textContent =
+    `共 ${lessons.length} 堂　${c.startDate||''}${calcEndDate(c.startDate,c.plan)?' → '+calcEndDate(c.startDate,c.plan):''}`;
+
+  const dupKey = l => `${l.dog}__${l.date}`;
+  const keyCount = {};
+  lessons.forEach(l => { const k = dupKey(l); keyCount[k] = (keyCount[k]||0)+1; });
+
+  document.getElementById('breakdown-modal-body').innerHTML = lessons.length === 0
+    ? `<div class="breakdown-empty">尚無上課紀錄</div>`
+    : `<table class="breakdown-table">
+        <thead><tr>
+          <th style="width:28px;"><input type="checkbox" id="breakdown-check-all" onchange="toggleAllBreakdown(this.checked)"></th>
+          <th>日期</th><th>狗狗</th><th>訓練師</th><th>類型</th>
+        </tr></thead>
+        <tbody>
+          ${lessons.map(l => {
+            const isDup = keyCount[dupKey(l)] > 1;
+            const lr = l.logRow || 0;
+            const cr = l.clientRow || 0;
+            return `<tr data-lr="${lr}" data-cr="${cr}" data-type="${esc(l.type||'上課')}"
+              style="${isDup?'background:#fff8e6;':''}"
+              onclick="toggleBreakdownRow(this,${lr},${cr},'${esc(l.type||'上課')}')">
+              <td><input type="checkbox" class="breakdown-cb" onchange="event.stopPropagation();toggleBreakdownRow(this.closest('tr'),${lr},${cr},'${esc(l.type||'上課')}',this.checked)"></td>
+              <td>${esc(l.date)}${l.time?' <span style="color:var(--muted);font-size:11px;">'+esc(l.time)+'</span>':''}</td>
+              <td>${esc(l.dog)}</td>
+              <td>${esc(l.trainer||'')}</td>
+              <td><span class="lesson-type-badge ${l.type==='代訓'?'lt-train':'lt-class'}">${esc(l.type||'上課')}</span>
+                  ${isDup?'<span class="dup-badge">重複</span>':''}
+                  ${lr?`<button class="del-lesson-btn" onclick="event.stopPropagation();deleteSingleLesson(${lr},${cr},'${esc(l.type||'上課')}',this)" title="刪除">🗑</button>`:''}
+              </td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>`;
+
+  document.getElementById('breakdown-modal').classList.add('open');
+}
+
+function renderCard(c, idx = 0, periodInfo = null) {
   const owner   = (c.owner||'').split('/')[0].trim();
   const phone   = (c.owner||'').includes('/') ? (c.owner||'').split('/')[1]?.trim() : '';
   const isConsult = (c.plan||'').includes('行為諮詢') || (c.plan||'').includes('諮詢');
@@ -1904,6 +2080,8 @@ function renderCard(c, idx = 0) {
     : urgent ? 'card-urgent' : warning ? 'card-warning' : paused ? 'card-paused' : done ? 'card-done' : 'card-ok';
   const planKey   = isConsult ? '諮' : (c.plan||'').match(/[ABD]/)?.[0] || 'other';
   const planBadge = `<span class="badge badge-plan-${planKey}">${esc(c.plan||'—')}</span>`;
+  const periodBadge = periodInfo && periodInfo.totalPeriods > 1
+    ? `<span class="badge badge-period">第${periodInfo.periodNum}期</span>` : '';
   const statusBadge = isConsult
     ? (consultDone ? '<span class="badge-consult-done">已完成</span>' : '<span class="badge-consult-pending">待諮詢</span>')
     : paused ? '<span class="badge badge-paused">暫停</span>'
@@ -1963,7 +2141,7 @@ function renderCard(c, idx = 0) {
           ${dateRange ? `<span class="meta-dot">·</span><span>${esc(dateRange)}</span>` : ''}
         </div>
       </div>
-      <div class="card-badges">${planBadge}${statusBadge}</div>
+      <div class="card-badges">${planBadge}${periodBadge}${statusBadge}</div>
     </div>
     ${isConsult ? `
     <div class="card-progress">
@@ -2534,21 +2712,42 @@ function esc(s) {
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
 function toggleView() {
-  currentView = currentView === 'list' ? 'dashboard' : 'list';
-  const btn  = document.getElementById('view-toggle');
-  const grid = document.getElementById('clients-grid');
-  const dash = document.getElementById('dashboard');
+  // list ↔ dashboard (history stays separate)
+  if (currentView === 'history') {
+    currentView = 'list';
+  } else {
+    currentView = currentView === 'list' ? 'dashboard' : 'list';
+  }
+  const btn = document.getElementById('view-toggle');
+  const histBtn = document.getElementById('hist-toggle');
   if (currentView === 'dashboard') {
     btn.textContent = '📋 客戶列表'; btn.classList.add('active');
   } else {
     btn.textContent = '📊 儀表板'; btn.classList.remove('active');
   }
+  histBtn.classList.remove('active');
   if (allClients.length) {
     renderAll();
-    const target = currentView === 'dashboard' ? dash : grid;
+    const target = currentView === 'dashboard'
+      ? document.getElementById('dashboard')
+      : document.getElementById('clients-grid');
     target.classList.remove('view-entering');
     requestAnimationFrame(() => requestAnimationFrame(() => target.classList.add('view-entering')));
   }
+}
+
+function toggleHistory() {
+  const wasHistory = currentView === 'history';
+  currentView = wasHistory ? 'list' : 'history';
+  const histBtn   = document.getElementById('hist-toggle');
+  const toggleBtn = document.getElementById('view-toggle');
+  if (currentView === 'history') {
+    histBtn.classList.add('active');
+    toggleBtn.textContent = '📊 儀表板'; toggleBtn.classList.remove('active');
+  } else {
+    histBtn.classList.remove('active');
+  }
+  if (allClients.length) renderAll();
 }
 
 const TRAINERS_INFO = [

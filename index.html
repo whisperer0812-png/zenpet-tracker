@@ -1319,12 +1319,11 @@ function renderCard(c, idx = 0) {
   const rbCls    = urgent ? 'rb-red' : warning ? 'rb-yellow' : done ? 'rb-done' : 'rb-green';
   const rbText   = done ? '結課' : `剩 ${c.classLeft} 堂`;
 
-  // Combined progress
-  const totalDone  = c.classDone + c.trainDone;
-  const totalTotal = c.classTotal + (c.trainTotal || 0);
+  // Combined progress — 分母用 classTotal（方案上限），代訓是從中分配，不另外加總
+  const totalDone   = c.classDone + c.trainDone;
+  const totalTotal  = c.classTotal;
   const combinedPct = totalTotal > 0 ? Math.min(100, Math.round(totalDone / totalTotal * 100)) : 0;
-  const totalLeft   = c.classLeft + (c.trainLeft || 0);
-  const rbText2     = done ? '結課' : `剩 ${totalLeft} 堂`;
+  const rbText2     = done ? '結課' : `剩 ${c.classLeft} 堂`;
   const breakdown   = c.trainTotal > 0
     ? `上課 ${c.classDone}/${c.classTotal} &nbsp;|&nbsp; 代訓 ${c.trainDone}/${c.trainTotal}`
     : `上課 ${c.classDone}/${c.classTotal}`;

@@ -384,6 +384,15 @@
     }
     .btn-add-lesson:hover { background: var(--accent); color: white; }
 
+    /* Client ID badge */
+    .client-id {
+      font-size: 11px; font-weight: 700; color: var(--muted);
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: 5px; padding: 1px 6px;
+      margin-right: 6px; vertical-align: middle;
+      letter-spacing: 0.02em;
+    }
+
     /* Progress breakdown */
     .prog-breakdown {
       font-size: 11px; color: var(--muted); text-align: right;
@@ -1352,7 +1361,7 @@ function renderCard(c, idx = 0) {
   return `<div class="client-card ${cardCls}" id="card-${c._row}" style="animation-delay:${delay}s">
     <div class="card-header">
       <div class="card-info">
-        <div class="dog-name">${esc(c.dog)}</div>
+        <div class="dog-name">${c.id ? `<span class="client-id">#${esc(c.id)}</span>` : ''}${esc(c.dog)}</div>
         <div class="owner-line">${esc(owner)}${phone ? ` · ${esc(phone)}` : ''}</div>
         <div class="meta-line">
           <span>${esc(c.trainer)}</span>

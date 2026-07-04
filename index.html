@@ -1124,7 +1124,14 @@
         </div>
         <div class="nc-field">
           <label class="nc-label">開始日期</label>
-          <input class="nc-input" id="nc-start-date" type="date">
+          <input class="nc-input" id="nc-start-date" type="date" oninput="ncUpdateEndDate()">
+        </div>
+      </div>
+      <div class="nc-row">
+        <div class="nc-field" id="nc-end-date-field" style="display:none;">
+          <label class="nc-label">預計結束日期（自動計算）</label>
+          <input class="nc-input" id="nc-end-date-display" type="text" readonly
+            style="background:#f8f8f8;color:var(--muted);cursor:default;">
         </div>
       </div>
       <div class="nc-row full">
@@ -1463,6 +1470,24 @@ function ncLookupById(val) {
 function ncPlanChanged(plan) {
   const def = PLAN_DEFAULTS[plan];
   if (def !== undefined) document.getElementById('nc-class-total').value = def;
+  ncUpdateEndDate();
+}
+
+function ncUpdateEndDate() {
+  const rawDate = document.getElementById('nc-start-date').value; // yyyy-mm-dd
+  const plan    = document.getElementById('nc-plan').value;
+  const field   = document.getElementById('nc-end-date-field');
+  const display = document.getElementById('nc-end-date-display');
+
+  if (!rawDate || !plan) { field.style.display = 'none'; return; }
+
+  // Convert yyyy-mm-dd → yyyy/mm/dd for calcEndDate
+  const startFmt = rawDate.replaceAll('-', '/');
+  const end = calcEndDate(startFmt, plan);
+
+  if (!end) { field.style.display = 'none'; return; }
+  field.style.display = 'block';
+  display.value = `${startFmt} → ${end}`;
 }
 
 async function submitNewClient() {

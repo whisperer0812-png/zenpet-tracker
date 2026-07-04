@@ -1161,18 +1161,7 @@
 <div class="nc-overlay" id="nc-modal" onclick="closeNewClientModal(event)">
   <div class="nc-modal">
     <div class="nc-title">＋ 新增客戶案例</div>
-    <div class="nc-sub">從報名表單選入資料，或手動輸入編號帶入舊客戶資料</div>
-
-    <!-- 從報名表單選入 -->
-    <div class="nc-form-search-wrap">
-      <div class="nc-form-search-row">
-        <input class="nc-form-search-input" id="nc-form-search" type="text"
-               placeholder="🔍 搜尋報名表單（狗名 / 飼主）…"
-               oninput="filterFormClients(this.value)" onfocus="showFormDropdown()" onblur="hideFormDropdown()">
-        <button class="nc-form-refresh-btn" onclick="loadFormClients(true)" title="重新載入表單">↺</button>
-      </div>
-      <div class="nc-form-dropdown" id="nc-form-dropdown"></div>
-    </div>
+    <div class="nc-sub">輸入報名表單的編號，資料自動帶入；方案選定後自動填入堂數</div>
 
     <!-- 編號 lookup -->
     <datalist id="nc-id-list"></datalist>
@@ -1793,126 +1782,8 @@ async function submitEditClient() {
 // ── New Client Modal ──────────────────────────────────────────
 const PLAN_DEFAULTS = { 'A方案': 6, 'B方案': 20 };
 
-// ── 表單報名資料 ─────────────────────────────────────────────
-let formClients = [];
-let formClientsLoaded = false;
-
-function loadFormClients(force = false) {
-  if (formClientsLoaded && !force) return;
-  const dd = document.getElementById('nc-form-dropdown');
-  dd.innerHTML = '<div class="nc-form-loading">載入中…</div>';
-  dd.classList.add('open');
-
-  const url = typeof SCRIPT_URL !== 'undefined'
-    ? SCRIPT_URL + '?action=formClients'
-    : null;
-  if (!url) { dd.innerHTML = '<div class="nc-form-loading">（Demo 模式，無表單資料）</div>'; return; }
-
-  fetch(url)
-    .then(r => r.json())
-    .then(j => {
-      formClients = (j.formClients || []).sort((a, b) =>
-        (b.timestamp || '').localeCompare(a.timestamp || ''));
-      formClientsLoaded = true;
-      renderFormDropdown(formClients);
-    })
-    .catch(() => {
-      dd.innerHTML = '<div class="nc-form-loading">載入失敗，請點 ↺ 重試</div>';
-    });
-}
-
-function filterFormClients(q) {
-  if (!formClientsLoaded) { loadFormClients(); return; }
-  const kw = q.trim().toLowerCase();
-  const filtered = kw
-    ? formClients.filter(c =>
-        (c.dog   || '').toLowerCase().includes(kw) ||
-        (c.owner || '').toLowerCase().includes(kw))
-    : formClients;
-  renderFormDropdown(filtered);
-  document.getElementById('nc-form-dropdown').classList.add('open');
-}
-
-function showFormDropdown() {
-  loadFormClients();
-  document.getElementById('nc-form-dropdown').classList.add('open');
-}
-
-function hideFormDropdown() {
-  setTimeout(() => {
-    document.getElementById('nc-form-dropdown').classList.remove('open');
-  }, 200);
-}
-
-function renderFormDropdown(list) {
-  const dd = document.getElementById('nc-form-dropdown');
-  if (!list.length) {
-    dd.innerHTML = '<div class="nc-form-loading">找不到符合的報名記錄</div>';
-    return;
-  }
-  dd.innerHTML = list.map((c, i) => `
-    <div class="nc-form-item" onclick="selectFormClient(${formClients.indexOf(c)})">
-      <div class="nc-form-item-dog">${esc(c.dog)}${c.owner ? `　<span style="font-weight:400;color:#555">${esc(c.owner)}</span>` : ''}</div>
-      <div class="nc-form-item-meta">${c.plan ? esc(c.plan) + '　' : ''}${c.timestamp || ''}</div>
-    </div>`).join('');
-}
-
-function selectFormClient(idx) {
-  const c = formClients[idx];
-  if (!c) return;
-
-  const fill = (id, val) => {
-    const el = document.getElementById(id);
-    if (!el) return;
-    el.value = val || '';
-    el.classList.toggle('filled', !!(val));
-  };
-
-  // 自動產生下一個編號
-  const nextId = generateNextClientId();
-  fill('nc-id',      nextId);
-  fill('nc-dog',     c.dog);
-  fill('nc-owner',   c.owner + (c.phone ? '/' + c.phone : ''));
-  fill('nc-email',   c.email);
-  fill('nc-address', c.address);
-  fill('nc-notes',   c.notes);
-
-  // 方案 & 堂數
-  if (c.plan) {
-    const sel = document.getElementById('nc-plan');
-    if (sel) {
-      // 嘗試精確匹配選項
-      const opt = [...sel.options].find(o => o.value === c.plan || c.plan.includes(o.value));
-      if (opt) {
-        sel.value = opt.value;
-        ncPlanChanged(opt.value);
-      }
-    }
-  }
-
-  // 清空搜尋框，關閉下拉
-  document.getElementById('nc-form-search').value = '';
-  document.getElementById('nc-form-dropdown').classList.remove('open');
-
-  // 給個確認提示
-  const hint = document.getElementById('nc-lookup-hint');
-  hint.style.borderColor = 'var(--accent)';
-  hint.style.background  = '#f0faf5';
-  hint.style.color       = 'var(--accent)';
-  hint.className = 'nc-lookup-hint show';
-  hint.textContent = `✓ 已從報名表單帶入「${c.dog}」，編號自動設為 ${nextId}，請確認後送出`;
-}
-
-function generateNextClientId() {
-  const ids = allClients
-    .map(c => parseInt(String(c.id).trim(), 10))
-    .filter(n => !isNaN(n));
-  return ids.length ? String(Math.max(...ids) + 1) : '1';
-}
-
 // ── 開啟 / 關閉 新增 Modal ───────────────────────────────────
 function openNewClientModal() {
-  // Reset form
   ['nc-id','nc-dog','nc-owner','nc-email','nc-address','nc-notes'].forEach(id => {
     document.getElementById(id).value = '';
     document.getElementById(id).classList.remove('filled');
@@ -1925,77 +1796,94 @@ function openNewClientModal() {
   document.getElementById('nc-lookup-hint').textContent = '';
   document.getElementById('nc-submit-btn').disabled = false;
   document.getElementById('nc-submit-btn').textContent = '✓ 新增客戶';
-  document.getElementById('nc-form-search').value = '';
-  document.getElementById('nc-form-dropdown').classList.remove('open');
-
-  // 填充 datalist：每個編號只出現一次（取最新那筆的狗名）
-  const dl = document.getElementById('nc-id-list');
-  dl.innerHTML = '';
-  const seen = {};
-  [...allClients].reverse().forEach(c => {
-    const id = String(c.id).trim();
-    if (!id || seen[id]) return;
-    seen[id] = true;
-    const opt = document.createElement('option');
-    opt.value = id;
-    opt.label = c.dog ? `${c.dog}（${c.owner || '—'}）` : '';
-    dl.appendChild(opt);
-  });
-
   document.getElementById('nc-modal').classList.add('open');
-
-  // 背景預載表單資料
-  loadFormClients();
+  // 自動 focus 到編號欄
+  setTimeout(() => document.getElementById('nc-id').focus(), 100);
 }
 
 function closeNewClientModal(e) {
   if (e && e.target !== document.getElementById('nc-modal')) return;
-  document.getElementById('nc-form-dropdown').classList.remove('open');
   document.getElementById('nc-modal').classList.remove('open');
 }
 
+// ── 編號查詢：先查現有客戶，再查表單 ────────────────────────
 let _ncLookupTimer = null;
 function ncLookupById(val) {
   clearTimeout(_ncLookupTimer);
-  _ncLookupTimer = setTimeout(() => {
-    const hint = document.getElementById('nc-lookup-hint');
-    const v = val.trim();
-    if (!v) { hint.className = 'nc-lookup-hint'; hint.textContent = ''; return; }
+  _ncLookupTimer = setTimeout(() => _doLookup(val), 400);
+}
 
-    // 寬鬆比對：忽略前後空白、字串/數字都接受
-    const matches = allClients.filter(c =>
-      String(c.id).trim() === v || Number(c.id) === Number(v)
-    );
+async function _doLookup(val) {
+  const hint = document.getElementById('nc-lookup-hint');
+  const v = val.trim();
+  if (!v) { hint.className = 'nc-lookup-hint'; hint.textContent = ''; return; }
 
-    if (matches.length === 0) {
-      hint.className = 'nc-lookup-hint show';
-      hint.style.borderColor = '#f0a500';
-      hint.style.background  = '#fff8e6';
-      hint.style.color       = '#92400e';
-      hint.textContent       = `找不到編號「${v}」，請確認後手動填寫，或這是全新客戶`;
-      return;
-    }
-
-    // 重置顏色（找到時用綠色）
-    hint.style.borderColor = 'var(--accent)';
-    hint.style.background  = '#f0faf5';
-    hint.style.color       = 'var(--accent)';
-
-    const c = matches[matches.length - 1]; // 多期時取最新一筆
-
-    const fill = (id, val) => {
-      const el = document.getElementById(id);
-      el.value = val || '';
-      el.classList.toggle('filled', !!(val));
+  const setHint = (type, msg) => {
+    hint.className = 'nc-lookup-hint show';
+    const styles = {
+      ok:      { border: 'var(--accent)',  bg: '#f0faf5', color: 'var(--accent)' },
+      warn:    { border: '#f0a500',        bg: '#fff8e6', color: '#92400e' },
+      loading: { border: '#aaa',           bg: '#f5f5f5', color: '#666' },
     };
+    const s = styles[type] || styles.warn;
+    hint.style.borderColor = s.border;
+    hint.style.background  = s.bg;
+    hint.style.color       = s.color;
+    hint.textContent = msg;
+  };
+
+  const fill = (id, val) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.value = val || '';
+    el.classList.toggle('filled', !!(val));
+  };
+
+  // ① 先查現有客戶（第二期情況）
+  const existing = allClients.filter(c =>
+    String(c.id).trim() === v || Number(c.id) === Number(v)
+  );
+  if (existing.length > 0) {
+    const c = existing[existing.length - 1];
     fill('nc-dog',     c.dog);
     fill('nc-owner',   c.owner);
     fill('nc-email',   c.email);
     fill('nc-address', c.address);
+    setHint('ok', `✓ 找到現有客戶「${c.dog}」（${c.owner || '—'}），可直接修改後新增第二期`);
+    return;
+  }
 
-    hint.className = 'nc-lookup-hint show';
-    hint.textContent = `✓ 找到「${c.dog}」（飼主：${c.owner||'—'}），資料已自動填入，可直接修改`;
-  }, 300);
+  // ② 是數字 → 去表單抓第 v 份報名資料
+  const n = parseInt(v, 10);
+  if (!isNaN(n) && n > 0) {
+    if (isDemo) { setHint('warn', 'Demo 模式無法連接表單'); return; }
+    setHint('loading', `⏳ 讀取第 ${n} 份報名資料中…`);
+    try {
+      const j = await fetch(`${SCRIPT_URL}?action=formClient&idx=${n}`).then(r => r.json());
+      if (j.success && j.client) {
+        const c = j.client;
+        fill('nc-dog',     c.dog);
+        fill('nc-owner',   c.owner + (c.phone ? '/' + c.phone : ''));
+        fill('nc-email',   c.email);
+        fill('nc-address', c.address);
+        fill('nc-notes',   c.notes);
+        // 方案
+        if (c.plan) {
+          const sel = document.getElementById('nc-plan');
+          const opt = [...sel.options].find(o => o.value === c.plan || c.plan.includes(o.value));
+          if (opt) { sel.value = opt.value; ncPlanChanged(opt.value); }
+        }
+        setHint('ok', `✓ 第 ${n} 份報名：${c.dog}（${c.owner || '—'}，${c.timestamp}）已自動填入`);
+      } else {
+        const total = j.total ? `（共 ${j.total} 份）` : '';
+        setHint('warn', `找不到第 ${n} 份報名${total}，請手動填寫`);
+      }
+    } catch(e) {
+      setHint('warn', '表單讀取失敗，請手動填寫');
+    }
+  } else {
+    setHint('warn', `找不到編號「${v}」，請確認或手動填寫`);
+  }
 }
 
 function ncPlanChanged(plan) {

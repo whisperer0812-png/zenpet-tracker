@@ -2162,7 +2162,7 @@ function renderDashboard() {
         const tc       = all.filter(c => c.trainer === t);
         const tDone    = allLessons.filter(l => l.trainer === t && l.date.startsWith(ym)).length;
         const tAbsence = tc.reduce((sum, c) => sum + (c.absences||[]).filter(a => a && a.startsWith(ym)).length, 0);
-        const tLeft    = tc.filter(c => c.status === '進行中').reduce((sum, c) => sum + (c.classLeft||0) + (c.trainLeft||0), 0);
+        const tLeft    = tc.filter(c => c.status === '進行中').reduce((sum, c) => sum + (c.classLeft||0), 0);
         return `<div class="dash-table-row">
           <span class="dash-tr-name">${esc(t)}</span>
           <span class="dash-tr-cell accent">${tDone || '—'}</span>
@@ -2177,7 +2177,7 @@ function renderDashboard() {
           ${all.reduce((s,c)=>s+(c.absences||[]).filter(a=>a&&a.startsWith(ym)).length,0)||'—'}
         </span>
         <span class="dash-tr-cell" style="font-weight:800;">
-          ${all.filter(c=>c.status==='進行中').reduce((s,c)=>s+(c.classLeft||0)+(c.trainLeft||0),0)||'—'}
+          ${all.filter(c=>c.status==='進行中').reduce((s,c)=>s+(c.classLeft||0),0)||'—'}
         </span>
       </div>
     </div>

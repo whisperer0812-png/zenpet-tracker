@@ -639,6 +639,9 @@
     .breakdown-table td { padding: 8px 8px; border-bottom: 1px solid var(--border); vertical-align: middle; }
     .breakdown-table tr:last-child td { border-bottom: none; }
     .breakdown-table tr:hover td { background: var(--bg); }
+    .breakdown-del-btn { background: none; border: none; cursor: pointer; font-size: 14px; padding: 2px 6px; border-radius: 6px; opacity: 0.4; transition: opacity 0.15s, background 0.15s; }
+    .breakdown-del-btn:hover { opacity: 1; background: #fee2e2; }
+    .breakdown-del-btn.loading { opacity: 0.3; pointer-events: none; }
     .breakdown-empty { text-align: center; padding: 28px; color: var(--muted); font-size: 13px; }
     .dash-trainer-bar { display: flex; align-items: center; gap: 10px; padding: 8px 14px; background: var(--card); border-radius: 10px; margin-bottom: 14px; flex-wrap: wrap; }
     .dash-trainer-label { font-size: 12px; font-weight: 700; color: var(--muted); white-space: nowrap; }
@@ -1023,7 +1026,7 @@ const DEMO = [
 ];
 
 let allClients = [], activeTrainer = 'all', activeStatus = 'all', currentView = 'list', dashDate = '', showArchived = false, dashTrainer = 'all';
-let _dashViewLessons = [], _dashYm = '', _dashWeek = {};
+let _dashViewLessons = [], _dashYm = '', _dashWeek = {}, _lastBreakdownPeriod = 'month';
 const isDemo = (SCRIPT_URL === 'YOUR_APPS_SCRIPT_URL_HERE');
 
 function calcEndDate(startDate, plan) {
@@ -2117,6 +2120,7 @@ function setDashTrainer(t) {
 }
 
 function openLessonBreakdown(period) {
+  _lastBreakdownPeriod = period;
   let lessons, title, sub;
   if (period === 'month') {
     lessons = _dashViewLessons.filter(l => l.date.startsWith(_dashYm));
@@ -2157,16 +2161,20 @@ function openLessonBreakdown(period) {
        ${dupCount > 0 ? `<div style="font-size:11px;color:#92400e;margin-bottom:10px;">同一隻狗同一天出現超過 1 筆，請到 Google Sheet「上課紀錄」分頁刪除多餘的列。</div>` : ''}
        <table class="breakdown-table">
          <thead><tr>
-           <th>日期</th><th>狗狗</th><th>訓練師</th><th>類型</th>
+           <th>日期</th><th>狗狗</th><th>訓練師</th><th>類型</th><th></th>
          </tr></thead>
          <tbody>
-           ${sorted.map(l => {
+           ${sorted.map((l, idx) => {
              const isDup = keyCount[dupKey(l)] > 1;
+             const lr = l.logRow || 0;
+             const cr = l.clientRow || 0;
+             const tp = encodeURIComponent(l.type || '上課');
              return `<tr style="${isDup ? 'background:#fff8e6;' : ''}">
                <td>${esc(l.date)}</td>
                <td style="font-weight:700;">${esc(l.dog)}${isDup ? ' <span style="font-size:10px;color:#b45309;font-weight:800;">重複</span>' : ''}</td>
                <td style="color:var(--muted);font-size:11px;">${esc(l.trainer||'')}</td>
                <td><span class="lesson-type-badge ${l.type==='代訓'?'lt-train':'lt-class'}">${esc(l.type||'上課')}</span></td>
+               <td><button class="breakdown-del-btn" onclick="deleteLessonEntry(${lr},${cr},decodeURIComponent('${tp}'),'${esc(l.dog)}','${esc(l.date)}',this)" title="刪除這筆">🗑</button></td>
              </tr>`;
            }).join('')}
          </tbody>
@@ -2178,6 +2186,55 @@ function openLessonBreakdown(period) {
 function closeLessonBreakdown(e) {
   if (e.target === document.getElementById('breakdown-modal')) {
     document.getElementById('breakdown-modal').classList.remove('open');
+  }
+}
+
+async function deleteLessonEntry(logRow, clientRow, type, dog, date, btn) {
+  if (!confirm(`確定刪除「${dog}」${date} 的${type}紀錄？\n（同步修正堂數統計）`)) return;
+  btn.classList.add('loading');
+
+  if (isDemo) {
+    const c = allClients.find(x => x._row === clientRow);
+    if (c) {
+      const idx = c.lessonDates.findIndex(l => l.date === date && l.type === type && l.logRow === logRow);
+      if (idx !== -1) c.lessonDates.splice(idx, 1);
+      if (type === '代訓') { c.trainDone = Math.max(0, (c.trainDone||0)-1); c.trainLeft = (c.trainLeft||0)+1; }
+      else                 { c.classDone = Math.max(0, (c.classDone||0)-1); c.classLeft = (c.classLeft||0)+1; }
+    }
+    btn.closest('tr').style.opacity = '0.3';
+    setTimeout(() => { openLessonBreakdown(_lastBreakdownPeriod); showToast('已刪除（Demo 模式）'); }, 400);
+    return;
+  }
+
+  try {
+    const json = await fetch(SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'deleteLesson', logRow, clientRow, type })
+    }).then(r => r.json());
+    if (!json.success) throw new Error(json.error);
+
+    // update local cache
+    const c = allClients.find(x => x._row === clientRow);
+    if (c) {
+      const idx = c.lessonDates.findIndex(l => l.logRow === logRow);
+      if (idx !== -1) c.lessonDates.splice(idx, 1);
+      if (type === '代訓') { c.trainDone = Math.max(0, (c.trainDone||0)-1); c.trainLeft = (c.trainLeft||0)+1; }
+      else                 { c.classDone = Math.max(0, (c.classDone||0)-1); c.classLeft = (c.classLeft||0)+1; }
+      // fix logRow for remaining entries (sheet rows shifted after deletion)
+      c.lessonDates.forEach(l => { if (l.logRow > logRow) l.logRow--; });
+    }
+    // also fix other clients' logRows
+    allClients.forEach(c2 => {
+      if (c2._row === clientRow) return;
+      c2.lessonDates.forEach(l => { if (l.logRow > logRow) l.logRow--; });
+    });
+
+    btn.closest('tr').style.transition = 'opacity 0.3s';
+    btn.closest('tr').style.opacity = '0';
+    setTimeout(() => { openLessonBreakdown(_lastBreakdownPeriod); showToast('已刪除並修正堂數'); }, 350);
+  } catch(err) {
+    showToast('⚠️ ' + err.message);
+    btn.classList.remove('loading');
   }
 }
 
@@ -2209,7 +2266,7 @@ function renderDashboard() {
   const allLessons = [];
   all.forEach(c => {
     (c.lessonDates||[]).forEach(l => {
-      if (l.date) allLessons.push({ ...l, dog: c.dog, trainer: c.trainer });
+      if (l.date) allLessons.push({ ...l, dog: c.dog, trainer: c.trainer, clientRow: c._row });
     });
   });
   allLessons.sort((a,b) => b.date.localeCompare(a.date));

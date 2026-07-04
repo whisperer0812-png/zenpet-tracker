@@ -626,6 +626,12 @@
     }
     .dash-date-input:focus { border-color: var(--accent); }
     .dash-date-hint { font-size: 11px; color: var(--muted); }
+    .dash-trainer-bar { display: flex; align-items: center; gap: 10px; padding: 8px 14px; background: var(--card); border-radius: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+    .dash-trainer-label { font-size: 12px; font-weight: 700; color: var(--muted); white-space: nowrap; }
+    .dash-trainer-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+    .dash-trainer-chip { padding: 4px 12px; border-radius: 20px; border: 1.5px solid var(--border); background: var(--bg); color: var(--text); font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.15s; }
+    .dash-trainer-chip:hover { border-color: var(--accent); color: var(--accent); }
+    .dash-trainer-chip.active { background: var(--accent); color: #fff; border-color: var(--accent); }
 
     /* Period stats */
     .period-big {
@@ -995,7 +1001,7 @@ const DEMO = [
   {_row:12, id:'195', dog:'豆豆',     owner:'李大明/0988888888',       plan:'B方案', period:'第1期', classTotal:20, classDone:20, classLeft:0,  trainTotal:10, trainDone:10, trainLeft:0,  trainer:'羊桃', startDate:'2025/12/01', status:'已結課', absences:[], notes:'', lessonDates:[{date:'2026/05/26',type:'上課'},{date:'2026/06/01',type:'上課'}]},
 ];
 
-let allClients = [], activeTrainer = 'all', activeStatus = 'all', currentView = 'list', dashDate = '', showArchived = false;
+let allClients = [], activeTrainer = 'all', activeStatus = 'all', currentView = 'list', dashDate = '', showArchived = false, dashTrainer = 'all';
 const isDemo = (SCRIPT_URL === 'YOUR_APPS_SCRIPT_URL_HERE');
 
 function calcEndDate(startDate, plan) {
@@ -2053,6 +2059,11 @@ function onDashDateChange(val) {
   renderDashboard();
 }
 
+function setDashTrainer(t) {
+  dashTrainer = t;
+  renderDashboard();
+}
+
 function getWeekRange(dateStr) {
   const d   = new Date(dateStr);
   const day = d.getDay();
@@ -2086,9 +2097,19 @@ function renderDashboard() {
   });
   allLessons.sort((a,b) => b.date.localeCompare(a.date));
 
+  // ── Trainer filter (dashboard-level) ──────────────────────────
+  const dataTrainers = [...new Set(all.map(c=>c.trainer).filter(Boolean))].sort((a,b) => {
+    const ai = TRAINERS_INFO.findIndex(t => a.includes(t.name));
+    const bi = TRAINERS_INFO.findIndex(t => b.includes(t.name));
+    if (ai !== -1 && bi !== -1) return ai - bi;
+    return a.localeCompare(b);
+  });
+  const viewClients = dashTrainer === 'all' ? all : all.filter(c => c.trainer === dashTrainer);
+  const viewLessons = dashTrainer === 'all' ? allLessons : allLessons.filter(l => l.trainer === dashTrainer);
+
   // ── Month / week counts ────────────────────────────────────────
-  const monthTotal = allLessons.filter(l => l.date.startsWith(ym)).length;
-  const weekTotal  = allLessons.filter(l => l.date >= week.start && l.date <= week.end).length;
+  const monthTotal = viewLessons.filter(l => l.date.startsWith(ym)).length;
+  const weekTotal  = viewLessons.filter(l => l.date >= week.start && l.date <= week.end).length;
 
   // ── Overview stats ─────────────────────────────────────────────
   const active  = all.filter(c => c.status === '進行中').length;
@@ -2135,6 +2156,17 @@ function renderDashboard() {
     <span class="dash-date-hint">查看該日所在月份及週數的上課統計</span>
   </div>
 
+  <!-- ── 訓練師篩選 ── -->
+  <div class="dash-trainer-bar">
+    <span class="dash-trainer-label">👤 訓練師</span>
+    <div class="dash-trainer-chips">
+      <button class="dash-trainer-chip ${dashTrainer==='all'?'active':''}" onclick="setDashTrainer('all')">全部</button>
+      ${dataTrainers.map(t => `
+        <button class="dash-trainer-chip ${dashTrainer===t?'active':''}" onclick="setDashTrainer(${JSON.stringify(t)})">${esc(t)}</button>
+      `).join('')}
+    </div>
+  </div>
+
   <!-- ── 時段統計 ── -->
   <div class="dash-section">
     <div class="dash-section-title">時段統計</div>
@@ -2158,7 +2190,7 @@ function renderDashboard() {
         <span class="dash-tr-cell">🗓 請假（月）</span>
         <span class="dash-tr-cell">📚 正在上課（剩餘）</span>
       </div>
-      ${trainers.map(t => {
+      ${(dashTrainer === 'all' ? trainers : trainers.filter(t => t === dashTrainer)).map(t => {
         const tc       = all.filter(c => c.trainer === t);
         const tDone    = allLessons.filter(l => l.trainer === t && l.date.startsWith(ym)).length;
         const tAbsence = tc.reduce((sum, c) => sum + (c.absences||[]).filter(a => a && a.startsWith(ym)).length, 0);
@@ -2170,6 +2202,7 @@ function renderDashboard() {
           <span class="dash-tr-cell">${tLeft || '—'}</span>
         </div>`;
       }).join('')}
+      ${dashTrainer === 'all' ? `
       <div class="dash-table-row" style="background:var(--bg);">
         <span class="dash-tr-name" style="font-size:11px;color:var(--muted);">合計</span>
         <span class="dash-tr-cell accent" style="font-weight:800;">${monthTotal}</span>
@@ -2179,7 +2212,7 @@ function renderDashboard() {
         <span class="dash-tr-cell" style="font-weight:800;">
           ${all.filter(c=>c.status==='進行中').reduce((s,c)=>s+(c.classLeft||0),0)||'—'}
         </span>
-      </div>
+      </div>` : ''}
     </div>
   </div>
 
@@ -2187,7 +2220,7 @@ function renderDashboard() {
   <div class="dash-section">
     <div class="dash-section-title">訓練師 · 當月課程類型分布（${ymLabel}）</div>
     <div class="trainer-pie-row">
-      ${TRAINERS_INFO.map(ti => {
+      ${(dashTrainer === 'all' ? TRAINERS_INFO : TRAINERS_INFO.filter(ti => dashTrainer.includes(ti.name))).map(ti => {
         const t = ti.name;
         // Count lessons by plan type for this trainer this month
         const counts = Object.fromEntries(PLAN_ORDER.map(k => [k, 0]));
@@ -2299,16 +2332,16 @@ function renderDashboard() {
 
   <!-- ── 最近上課紀錄 ── -->
   <div class="dash-section">
-    <div class="dash-section-title">最近上課紀錄</div>
+    <div class="dash-section-title">最近上課紀錄${dashTrainer !== 'all' ? `（${esc(dashTrainer)}）` : ''}</div>
     <div class="recent-lesson-list">
-      ${allLessons.slice(0,10).map(l => `
+      ${viewLessons.slice(0,10).map(l => `
         <div class="recent-lesson-item">
           <span class="rl-date">${esc(l.date)}${l.time?' '+esc(l.time):''}</span>
           <span class="rl-dog">${esc(l.dog)}</span>
           <span class="rl-trainer">${esc(l.trainer)}</span>
           <span class="lesson-type-badge ${l.type==='代訓'?'lt-train':'lt-class'}">${esc(l.type||'上課')}</span>
         </div>`).join('')}
-      ${allLessons.length===0
+      ${viewLessons.length===0
         ? '<div style="color:var(--muted);font-size:12px;padding:8px;font-style:italic;">尚無上課紀錄</div>'
         : ''}
     </div>

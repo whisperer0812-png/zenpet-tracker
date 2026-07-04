@@ -1098,12 +1098,13 @@
     <div class="nc-sub">填入編號後自動帶入已有資料；方案選定後自動填入堂數</div>
 
     <!-- 編號 lookup -->
+    <datalist id="nc-id-list"></datalist>
     <div class="nc-group">
       <div class="nc-group-title">客戶識別</div>
       <div class="nc-row">
         <div class="nc-field">
           <label class="nc-label">編號 *</label>
-          <input class="nc-input" id="nc-id" type="text" placeholder="例：188" oninput="ncLookupById(this.value)">
+          <input class="nc-input" id="nc-id" type="text" placeholder="點擊或輸入搜尋…" list="nc-id-list" autocomplete="off" oninput="ncLookupById(this.value)" onchange="ncLookupById(this.value)">
         </div>
         <div class="nc-field">
           <label class="nc-label">狗狗名字 *</label>
@@ -1682,6 +1683,21 @@ function openNewClientModal() {
   document.getElementById('nc-lookup-hint').textContent = '';
   document.getElementById('nc-submit-btn').disabled = false;
   document.getElementById('nc-submit-btn').textContent = '✓ 新增客戶';
+
+  // 填充 datalist：每個編號只出現一次（取最新那筆的狗名）
+  const dl = document.getElementById('nc-id-list');
+  dl.innerHTML = '';
+  const seen = {};
+  [...allClients].reverse().forEach(c => {
+    const id = String(c.id).trim();
+    if (!id || seen[id]) return;
+    seen[id] = true;
+    const opt = document.createElement('option');
+    opt.value = id;
+    opt.label = c.dog ? `${c.dog}（${c.owner || '—'}）` : '';
+    dl.appendChild(opt);
+  });
+
   document.getElementById('nc-modal').classList.add('open');
 }
 

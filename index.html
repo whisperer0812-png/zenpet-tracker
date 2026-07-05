@@ -207,6 +207,24 @@
       display: flex; flex-direction: column; align-items: flex-end;
       gap: 4px; flex-shrink: 0; margin-left: 10px;
     }
+    .card-delete-btn {
+      position: absolute; top: 8px; right: 8px;
+      background: none; border: none; cursor: pointer;
+      color: var(--muted); font-size: 15px; line-height: 1;
+      width: 22px; height: 22px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      opacity: 0; transition: opacity .15s, background .15s;
+      z-index: 2;
+    }
+    .client-card:hover .card-delete-btn { opacity: 1; }
+    .card-delete-btn:hover { background: #fee2e2; color: #dc2626; }
+    .undo-btn {
+      background: #fff3cd; border: 1px solid #ffc107;
+      color: #856404; border-radius: var(--radius-sm);
+      padding: 7px 14px; font-size: 13px; font-weight: 600;
+      cursor: pointer; white-space: nowrap;
+    }
+    .undo-btn:hover { background: #ffe8a1; }
     .badge {
       padding: 3px 9px; border-radius: 7px;
       font-size: 10px; font-weight: 700; white-space: nowrap;
@@ -1024,6 +1042,7 @@
     <button class="refresh-btn" id="cal-sync-btn" onclick="syncCalendar()" title="從各訓練師 Google 日曆拉取近30天上課紀錄">
       <span class="icon">🗓</span> 同步日曆
     </button>
+    <button class="undo-btn" id="undo-btn" onclick="undoDelete()" style="display:none;" title="回復剛剛刪除的客戶">↩ 回復</button>
     <button class="refresh-btn" id="refresh-btn" onclick="loadData()">
       <span class="icon">↻</span> 重新整理
     </button>
@@ -2298,6 +2317,7 @@ function renderCard(c, idx = 0, periodInfo = null) {
 
   const delay = (Math.min(idx, 7) * 0.045).toFixed(3);
   return `<div class="client-card ${cardCls}" id="card-${c._row}" style="animation-delay:${delay}s">
+    <button class="card-delete-btn" onclick="event.stopPropagation();deleteClient(${c._row})" title="刪除此案例">✕</button>
     <div class="card-header">
       <div class="card-info">
         <div class="dog-name">${c.id ? `<span class="client-id">#${esc(c.id)}</span>` : ''}${esc(c.dog)}</div>
@@ -2336,6 +2356,48 @@ function renderCard(c, idx = 0, periodInfo = null) {
     ${footerRows.length ? `<div class="card-footer-info">${footerRows.join('')}</div>` : ''}
     <div class="card-actions">${actions.join('')}</div>
   </div>`;
+}
+
+// ── Delete client ──────────────────────────────────────────────
+let lastDeleted = null, undoTimer = null;
+
+function deleteClient(row) {
+  const c = allClients.find(x => x._row === row);
+  if (!c) return;
+  if (!confirm(`確定要刪除「${c.dog}」的案例嗎？\n此操作可透過「↩ 回復」鈕撤回。`)) return;
+
+  lastDeleted = JSON.parse(JSON.stringify(c));
+  allClients = allClients.filter(x => x._row !== row);
+  renderClients();
+
+  const undoBtn = document.getElementById('undo-btn');
+  undoBtn.style.display = '';
+  undoBtn.title = `回復刪除的「${c.dog}」`;
+  clearTimeout(undoTimer);
+  undoTimer = setTimeout(() => {
+    undoBtn.style.display = 'none';
+    lastDeleted = null;
+    if (!isDemo) _doDeleteBackend(row);
+  }, 15000);
+}
+
+function undoDelete() {
+  if (!lastDeleted) return;
+  clearTimeout(undoTimer);
+  allClients.push(lastDeleted);
+  lastDeleted = null;
+  document.getElementById('undo-btn').style.display = 'none';
+  renderClients();
+}
+
+async function _doDeleteBackend(row) {
+  try {
+    await fetch(SCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'deleteClient', rowIndex: row }),
+    });
+  } catch(e) { console.error('delete failed', e); }
 }
 
 // ── Date confirm ───────────────────────────────────────────────

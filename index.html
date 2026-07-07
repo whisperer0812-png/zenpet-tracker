@@ -2662,7 +2662,7 @@ async function deleteClient(row) {
     try {
       await fetch(SCRIPT_URL, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'deleteClient', rowIndex: row }),
+        body: JSON.stringify({ action: 'deleteClient', rowIndex: row, clientId: c.id, clientDog: c.dog }),
       });
     } catch(e) { console.error('delete failed', e); }
   }

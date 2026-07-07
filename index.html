@@ -310,15 +310,19 @@
 
     /* Actions */
     .card-actions {
-      padding: 9px 12px 11px 18px; display: flex; gap: 7px;
-      border-top: 1px solid var(--border-light);
+      padding: 10px 14px 12px 14px; display: flex; align-items: center;
+      gap: 6px; border-top: 1px solid var(--border-light);
     }
+    .card-actions-main { display: flex; flex: 1; gap: 6px; }
+    .card-actions-side { display: flex; gap: 5px; align-items: center;
+      padding-left: 8px; border-left: 1px solid var(--border-light); }
     .act-btn {
-      flex: 1; padding: 9px 6px; border-radius: var(--radius-sm);
+      flex: 1; padding: 8px 4px; border-radius: var(--radius-sm);
       border: 1.5px solid var(--border); background: var(--white);
-      font-size: 13px; cursor: pointer; font-weight: 600;
-      display: flex; align-items: center; justify-content: center; gap: 4px;
-      transition: all 0.15s; color: var(--text);
+      font-size: 12.5px; cursor: pointer; font-weight: 700;
+      display: flex; align-items: center; justify-content: center; gap: 3px;
+      transition: all 0.15s; color: var(--text); line-height: 1.2;
+      min-height: 40px;
     }
     .act-btn:hover  { background: var(--accent); color: white; border-color: var(--accent); }
     .act-btn:active { transform: scale(0.96); }
@@ -327,9 +331,10 @@
     .act-btn-absence { color: #b45309; border-color: #f59e0b; }
     .act-btn-absence:hover { background: #f59e0b !important; color: white !important; border-color: #f59e0b !important; }
     .act-btn-sm {
-      flex: 0; padding: 9px 13px; border-radius: var(--radius-sm);
+      flex: 0; width: 36px; height: 36px; border-radius: var(--radius-sm);
       border: 1.5px solid var(--border); background: var(--white);
       font-size: 15px; cursor: pointer; transition: all 0.15s; color: var(--muted);
+      display: flex; align-items: center; justify-content: center;
     }
     .act-btn-sm:hover { background: var(--bg); color: var(--text); }
 
@@ -1019,11 +1024,13 @@
     @keyframes spin { to { transform: rotate(360deg); } }
   /* ── Homework button on card ── */
   .hw-card-btn {
-    background: none; border: 1.5px solid var(--border); border-radius: var(--radius-sm);
-    padding: 5px 10px; font-size: 12px; cursor: pointer; color: var(--muted);
+    flex: 0; width: 36px; height: 36px; border-radius: var(--radius-sm);
+    border: 1.5px solid var(--border); background: var(--white);
+    font-size: 15px; cursor: pointer; color: var(--muted);
     transition: border-color .15s, color .15s;
+    display: flex; align-items: center; justify-content: center;
   }
-  .hw-card-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .hw-card-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--bg); }
   .hw-card-btn.has-hw { border-color: #d97706; color: #d97706; background: #fffbeb; }
 
   /* ── Homework modal (trainer side) ── */
@@ -2600,17 +2607,19 @@ function renderCard(c, idx = 0, periodInfo = null) {
 
   const canClass = !done;
   const canTrain = !done && c.trainTotal > 0 && c.trainLeft > 0;
-  const actions  = [];
+  const mainBtns = [];
   if (isConsult && !consultDone) {
-    actions.push(`<button class="act-btn" onclick="confirmDate(${c._row},'class',this)">✓ 完成諮詢</button>`);
+    mainBtns.push(`<button class="act-btn" onclick="confirmDate(${c._row},'class',this)">✓ 完成諮詢</button>`);
   } else {
-    if (canClass) actions.push(`<button class="act-btn" onclick="confirmDate(${c._row},'class',this)">＋ 上課</button>`);
-    if (canTrain) actions.push(`<button class="act-btn" onclick="confirmDate(${c._row},'train',this)">＋ 代訓</button>`);
-    if (!done) actions.push(`<button class="act-btn act-btn-absence" onclick="confirmAbsence(${c._row},this)">＋ 請假</button>`);
+    if (canClass) mainBtns.push(`<button class="act-btn" onclick="confirmDate(${c._row},'class',this)">＋ 上課</button>`);
+    if (canTrain) mainBtns.push(`<button class="act-btn" onclick="confirmDate(${c._row},'train',this)">＋ 代訓</button>`);
+    if (!done) mainBtns.push(`<button class="act-btn act-btn-absence" onclick="confirmAbsence(${c._row},this)">＋ 請假</button>`);
   }
-  actions.push(`<button class="act-btn-sm" onclick="openEditModal(${c._row})" title="編輯客戶資料" style="font-size:14px;">✏️</button>`);
-  actions.push(`<button class="hw-card-btn" onclick="event.stopPropagation();openHwModal(${c._row})" title="訓練作業">📋 作業</button>`);
-  actions.push(`<button class="act-btn-sm" onclick="openModal(${c._row})">⋯</button>`);
+  const sideBtns = [
+    `<button class="act-btn-sm" onclick="openEditModal(${c._row})" title="編輯">✏️</button>`,
+    `<button class="hw-card-btn" onclick="event.stopPropagation();openHwModal(${c._row})" title="訓練作業">📋</button>`,
+    `<button class="act-btn-sm" onclick="openModal(${c._row})" title="詳細紀錄">⋯</button>`,
+  ];
 
   const delay = (Math.min(idx, 7) * 0.045).toFixed(3);
   return `<div class="client-card ${cardCls}" id="card-${c._row}" style="animation-delay:${delay}s">
@@ -2651,7 +2660,10 @@ function renderCard(c, idx = 0, periodInfo = null) {
       <div class="prog-breakdown">${breakdown}</div>
     </div>`}
     ${footerRows.length ? `<div class="card-footer-info">${footerRows.join('')}</div>` : ''}
-    <div class="card-actions">${actions.join('')}</div>
+    <div class="card-actions">
+      <div class="card-actions-main">${mainBtns.join('')}</div>
+      <div class="card-actions-side">${sideBtns.join('')}</div>
+    </div>
   </div>`;
 }
 

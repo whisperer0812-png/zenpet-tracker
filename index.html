@@ -1017,6 +1017,81 @@
 
     /* Refresh spin smoother */
     @keyframes spin { to { transform: rotate(360deg); } }
+  /* ── Homework button on card ── */
+  .hw-card-btn {
+    background: none; border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+    padding: 5px 10px; font-size: 12px; cursor: pointer; color: var(--muted);
+    transition: border-color .15s, color .15s;
+  }
+  .hw-card-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .hw-card-btn.has-hw { border-color: #d97706; color: #d97706; background: #fffbeb; }
+
+  /* ── Homework modal (trainer side) ── */
+  .hw-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:700; align-items:center; justify-content:center; }
+  .hw-overlay.open { display:flex; }
+  .hw-modal { background:var(--white); border-radius:var(--radius); width:min(540px,96vw); max-height:88vh; overflow-y:auto; padding:24px; box-shadow:0 20px 60px rgba(0,0,0,.18); }
+  .hw-modal-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; }
+  .hw-modal-head h3 { font-size:16px; font-weight:900; margin:0; }
+  .hw-modal-head button { background:none; border:none; font-size:18px; cursor:pointer; color:var(--muted); }
+  .hw-link-box { background:var(--bg); border:1px solid var(--border); border-radius:var(--radius-sm); padding:12px; margin-bottom:18px; }
+  .hw-link-box label { font-size:11px; font-weight:700; color:var(--muted); display:block; margin-bottom:6px; }
+  .hw-link-row { display:flex; gap:8px; }
+  .hw-link-row input { flex:1; font-size:12px; background:var(--white); border:1px solid var(--border); border-radius:6px; padding:6px 10px; color:var(--text); }
+  .hw-link-row button { background:var(--accent); color:white; border:none; border-radius:6px; padding:6px 14px; font-size:12px; font-weight:700; cursor:pointer; white-space:nowrap; }
+  .hw-add-form { border:1px solid var(--border); border-radius:var(--radius-sm); padding:14px; margin-bottom:18px; }
+  .hw-add-form h4 { font-size:13px; font-weight:800; margin:0 0 12px; }
+  .hw-add-form input, .hw-add-form textarea { width:100%; box-sizing:border-box; border:1px solid var(--border); border-radius:6px; padding:8px 10px; font-size:13px; font-family:inherit; margin-bottom:8px; }
+  .hw-add-form textarea { height:70px; resize:vertical; }
+  .hw-add-form .hw-add-row { display:flex; gap:8px; align-items:center; }
+  .hw-add-form .hw-add-row input { margin-bottom:0; flex:1; }
+  .hw-add-form .hw-submit-btn { background:var(--accent); color:white; border:none; border-radius:6px; padding:8px 18px; font-size:13px; font-weight:700; cursor:pointer; white-space:nowrap; }
+  .hw-list-title { font-size:12px; font-weight:800; color:var(--muted); margin-bottom:10px; letter-spacing:.5px; }
+  .hw-item { border:1px solid var(--border); border-radius:var(--radius-sm); padding:12px 14px; margin-bottom:10px; }
+  .hw-item-title { font-size:14px; font-weight:800; margin-bottom:4px; }
+  .hw-item-desc { font-size:13px; color:var(--muted); margin-bottom:6px; white-space:pre-wrap; }
+  .hw-item-meta { font-size:11px; color:var(--muted); display:flex; gap:12px; margin-bottom:8px; }
+  .hw-item-del { background:none; border:none; cursor:pointer; font-size:12px; color:#dc2626; opacity:.5; float:right; }
+  .hw-item-del:hover { opacity:1; }
+  .hw-sub-count { font-size:12px; font-weight:700; color:var(--accent); margin-bottom:6px; }
+  .hw-sub-item { background:var(--bg); border-radius:6px; padding:10px; margin-bottom:6px; font-size:12px; }
+  .hw-sub-item a { color:var(--accent); text-decoration:none; }
+  .hw-feedback-form { display:flex; gap:6px; margin-top:6px; }
+  .hw-feedback-form input { flex:1; border:1px solid var(--border); border-radius:6px; padding:5px 8px; font-size:12px; }
+  .hw-feedback-form button { background:var(--accent); color:white; border:none; border-radius:6px; padding:5px 12px; font-size:12px; cursor:pointer; }
+  .hw-feedback-given { background:#d1fae5; border-radius:6px; padding:6px 10px; font-size:12px; color:#065f46; margin-top:6px; }
+
+  /* ── Portal view (client facing) ── */
+  #portal-view { min-height:100vh; background:#f8f7f4; font-family:inherit; }
+  .portal-header { background:var(--accent); color:white; padding:16px 20px; display:flex; align-items:center; gap:12px; }
+  .portal-header-logo { width:36px; height:36px; background:white; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:900; font-size:16px; color:var(--accent); }
+  .portal-header-text .brand { font-size:16px; font-weight:900; letter-spacing:.5px; }
+  .portal-header-text .sub { font-size:11px; opacity:.8; }
+  .portal-body { padding:20px 16px; max-width:480px; margin:0 auto; }
+  .portal-card { background:white; border-radius:16px; padding:20px; box-shadow:0 2px 12px rgba(0,0,0,.08); margin-bottom:20px; }
+  .portal-dog { font-size:22px; font-weight:900; margin-bottom:4px; }
+  .portal-meta { font-size:13px; color:#666; margin-bottom:16px; }
+  .portal-prog-label { font-size:11px; font-weight:700; color:#999; margin-bottom:6px; display:flex; justify-content:space-between; }
+  .portal-prog-track { height:10px; background:#f0f0f0; border-radius:99px; overflow:hidden; margin-bottom:4px; }
+  .portal-prog-fill { height:100%; background:var(--accent); border-radius:99px; transition:width .5s; }
+  .portal-prog-detail { font-size:12px; color:#999; }
+  .portal-section { margin-bottom:24px; }
+  .portal-section-title { font-size:13px; font-weight:900; color:#333; margin-bottom:12px; display:flex; align-items:center; gap:6px; }
+  .portal-hw-item { background:white; border-radius:12px; padding:16px; margin-bottom:12px; box-shadow:0 1px 6px rgba(0,0,0,.06); }
+  .portal-hw-title { font-size:15px; font-weight:800; margin-bottom:6px; }
+  .portal-hw-desc { font-size:13px; color:#555; margin-bottom:10px; white-space:pre-wrap; }
+  .portal-hw-due { font-size:11px; color:#d97706; font-weight:700; margin-bottom:12px; }
+  .portal-hw-submitted { background:#d1fae5; border-radius:8px; padding:10px 12px; font-size:13px; color:#065f46; }
+  .portal-hw-feedback { margin-top:8px; font-size:12px; color:#065f46; font-weight:700; }
+  .portal-submit-toggle { background:var(--accent); color:white; border:none; border-radius:8px; padding:10px 18px; font-size:13px; font-weight:700; cursor:pointer; width:100%; }
+  .portal-submit-form { margin-top:12px; }
+  .portal-submit-form textarea { width:100%; box-sizing:border-box; border:1.5px solid var(--border); border-radius:8px; padding:10px; font-size:13px; font-family:inherit; height:80px; resize:vertical; margin-bottom:8px; }
+  .portal-submit-form input { width:100%; box-sizing:border-box; border:1.5px solid var(--border); border-radius:8px; padding:10px; font-size:13px; margin-bottom:10px; }
+  .portal-submit-form .submit-hint { font-size:11px; color:#999; margin-bottom:8px; margin-top:-4px; }
+  .portal-submit-btn { background:var(--accent); color:white; border:none; border-radius:8px; padding:11px; font-size:14px; font-weight:700; cursor:pointer; width:100%; }
+  .portal-empty { text-align:center; padding:32px; color:#999; font-size:14px; }
+  .portal-error { text-align:center; padding:60px 20px; }
+  .portal-error h2 { font-size:18px; margin-bottom:8px; }
+  .portal-error p { color:#999; font-size:14px; }
   </style>
 </head>
 <body>
@@ -1452,7 +1527,10 @@ const ADMIN_EMAIL = 'whisperer0812@gmail.com';
 
 let currentUser = null;
 
-function initAuth() {
+async function initAuth() {
+  // 飼主 portal 優先：有 token 就不走登入流程
+  if (await initPortalIfNeeded()) return;
+
   const saved = localStorage.getItem('zenpet_user');
   if (saved) {
     const info = ALLOWED_USERS[saved];
@@ -1972,6 +2050,219 @@ async function submitNewClient() {
   }
 }
 
+// ══════════════════════════════════════════════════════════════
+// 飼主 Portal
+// ══════════════════════════════════════════════════════════════
+const _portalToken = new URLSearchParams(window.location.search).get('token');
+
+async function initPortalIfNeeded() {
+  if (!_portalToken) return false;
+  document.getElementById('portal-view').style.display = '';
+  // hide trainer UI
+  const header = document.querySelector('header');
+  const main   = document.querySelector('.main-layout');
+  const login  = document.getElementById('login-overlay');
+  if (header) header.style.display = 'none';
+  if (main)   main.style.display   = 'none';
+  if (login)  login.style.display  = 'none';
+
+  try {
+    const j = await fetch(`${SCRIPT_URL}?action=portal&token=${_portalToken}`).then(r => r.json());
+    if (!j.success) { renderPortalError(j.error); return true; }
+    renderPortal(j.client, j.homework, j.submissions);
+  } catch(e) { renderPortalError('載入失敗，請稍後再試'); }
+  return true;
+}
+
+function renderPortalError(msg) {
+  document.getElementById('portal-body').innerHTML =
+    `<div class="portal-error"><h2>⚠️ 連結無效</h2><p>${msg}</p></div>`;
+}
+
+function renderPortal(c, homework, submissions) {
+  const pct  = c.classTotal > 0 ? Math.min(100, Math.round(c.classDone / c.classTotal * 100)) : 0;
+  const pure = Math.max(0, c.classDone - c.trainDone);
+  const detail = c.trainTotal > 0
+    ? `上課 ${pure} 堂・代訓 ${c.trainDone} 堂，共 ${c.classDone}/${c.classTotal} 堂`
+    : `${c.classDone} / ${c.classTotal} 堂`;
+
+  const pending  = homework.filter(h => !submissions.some(s => s.homeworkId === h.id));
+  const done     = homework.filter(h =>  submissions.some(s => s.homeworkId === h.id));
+
+  const hwHTML = hw => hw.map(h => {
+    const sub = submissions.find(s => s.homeworkId === h.id);
+    const id  = h.id;
+    return `<div class="portal-hw-item">
+      <div class="portal-hw-title">📝 ${esc(h.title)}</div>
+      ${h.description ? `<div class="portal-hw-desc">${esc(h.description)}</div>` : ''}
+      ${h.dueDate ? `<div class="portal-hw-due">⏰ 截止：${h.dueDate}</div>` : ''}
+      ${sub
+        ? `<div class="portal-hw-submitted">✓ 已繳交 · ${sub.submittedAt}
+            ${sub.description ? `<div style="margin-top:4px;font-weight:400">${esc(sub.description)}</div>` : ''}
+            ${sub.mediaUrl ? `<div><a href="${esc(sub.mediaUrl)}" target="_blank" style="color:var(--accent)">查看影片 ↗</a></div>` : ''}
+            ${sub.feedback ? `<div class="portal-hw-feedback">💬 訓練師：${esc(sub.feedback)}</div>` : ''}
+           </div>`
+        : `<button class="portal-submit-toggle" onclick="togglePortalSubmit('${id}')">繳交作業</button>
+           <div class="portal-submit-form" id="psf-${id}" style="display:none">
+             <textarea id="psd-${id}" placeholder="描述練習情況、遇到的問題…"></textarea>
+             <input id="psu-${id}" placeholder="影片 / 照片連結（選填，可貼 YouTube 或 Google 雲端連結）">
+             <div class="submit-hint">💡 先把影片傳到 YouTube（不公開）或 Google 雲端，再把連結貼上來</div>
+             <button class="portal-submit-btn" onclick="submitPortalHw('${id}')">送出作業</button>
+           </div>`
+      }
+    </div>`;
+  }).join('');
+
+  document.getElementById('portal-body').innerHTML = `
+    <div class="portal-card">
+      <div class="portal-dog">${esc(c.dog)}</div>
+      <div class="portal-meta">${esc(c.trainer)} 訓練師・${esc(c.plan)}${c.period ? '・' + esc(c.period) : ''}</div>
+      <div class="portal-prog-label"><span>課程進度</span><span>${pct}%</span></div>
+      <div class="portal-prog-track"><div class="portal-prog-fill" style="width:${pct}%"></div></div>
+      <div class="portal-prog-detail">${detail}・剩 ${c.classLeft} 堂</div>
+    </div>
+    ${pending.length > 0 ? `
+    <div class="portal-section">
+      <div class="portal-section-title">📌 待完成作業（${pending.length}）</div>
+      ${hwHTML(pending)}
+    </div>` : ''}
+    ${done.length > 0 ? `
+    <div class="portal-section">
+      <div class="portal-section-title">✅ 已完成作業</div>
+      ${hwHTML(done)}
+    </div>` : ''}
+    ${homework.length === 0 ? `<div class="portal-empty">訓練師還沒有指派作業，上完課後再來看看！</div>` : ''}
+  `;
+}
+
+function togglePortalSubmit(hwId) {
+  const el = document.getElementById(`psf-${hwId}`);
+  el.style.display = el.style.display === 'none' ? '' : 'none';
+}
+
+async function submitPortalHw(hwId) {
+  const desc = document.getElementById(`psd-${hwId}`).value.trim();
+  const url  = document.getElementById(`psu-${hwId}`).value.trim();
+  if (!desc && !url) { alert('請填寫說明或貼上影片連結'); return; }
+  const j = await fetch(SCRIPT_URL, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'submitHomework', token: _portalToken, homeworkId: hwId, description: desc, mediaUrl: url })
+  }).then(r => r.json());
+  if (j.success) {
+    showToast('✓ 作業繳交成功！');
+    const fresh = await fetch(`${SCRIPT_URL}?action=portal&token=${_portalToken}`).then(r => r.json());
+    if (fresh.success) renderPortal(fresh.client, fresh.homework, fresh.submissions);
+  } else { alert('繳交失敗：' + j.error); }
+}
+
+// ══════════════════════════════════════════════════════════════
+// 作業管理 Modal（訓練師端）
+// ══════════════════════════════════════════════════════════════
+let _hwRow = null;
+
+async function openHwModal(row) {
+  _hwRow = row;
+  const c = allClients.find(x => x._row === row);
+  document.getElementById('hw-modal-title').textContent = `${c.dog} 的訓練作業`;
+  document.getElementById('hw-overlay').classList.add('open');
+  document.getElementById('hw-portal-link-input').value = '連結產生中…';
+
+  // Generate / get token
+  const tj = await fetch(SCRIPT_URL, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'generateToken', clientId: c.id })
+  }).then(r => r.json());
+  if (tj.success) {
+    const base = window.location.href.split('?')[0];
+    document.getElementById('hw-portal-link-input').value = `${base}?token=${tj.token}`;
+  }
+  await refreshHwList(c.id);
+}
+
+function closeHwModal() {
+  document.getElementById('hw-overlay').classList.remove('open');
+  _hwRow = null;
+}
+
+function copyPortalLink() {
+  const val = document.getElementById('hw-portal-link-input').value;
+  if (!val || val === '連結產生中…') return;
+  navigator.clipboard.writeText(val).then(() => showToast('✓ 連結已複製！'));
+}
+
+async function submitNewHomework() {
+  const c     = allClients.find(x => x._row === _hwRow);
+  const title = document.getElementById('hw-new-title').value.trim();
+  const desc  = document.getElementById('hw-new-desc').value.trim();
+  const due   = document.getElementById('hw-new-due').value;
+  if (!title) { alert('請填寫作業標題'); return; }
+  const j = await fetch(SCRIPT_URL, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'addHomework', clientId: c.id, title, description: desc, dueDate: due, trainer: currentUser })
+  }).then(r => r.json());
+  if (j.success) {
+    document.getElementById('hw-new-title').value = '';
+    document.getElementById('hw-new-desc').value  = '';
+    document.getElementById('hw-new-due').value   = '';
+    showToast('✓ 作業已新增');
+    await refreshHwList(c.id);
+  }
+}
+
+async function refreshHwList(clientId) {
+  const j = await fetch(`${SCRIPT_URL}?action=homework&clientId=${clientId}`).then(r => r.json());
+  const el = document.getElementById('hw-list-body');
+  if (!j.success) { el.innerHTML = '<div style="color:#dc2626;font-size:13px;">載入失敗</div>'; return; }
+  const hw   = j.homework;
+  const subs = j.submissions;
+  if (hw.length === 0) { el.innerHTML = '<div class="portal-empty" style="padding:16px">尚未指派任何作業</div>'; return; }
+  el.innerHTML = hw.map(h => {
+    const hwSubs = subs.filter(s => s.homeworkId === h.id);
+    return `<div class="hw-item">
+      <button class="hw-item-del" onclick="deleteHw('${h.id}','${clientId}')" title="刪除作業">✕</button>
+      <div class="hw-item-title">${esc(h.title)}</div>
+      ${h.description ? `<div class="hw-item-desc">${esc(h.description)}</div>` : ''}
+      <div class="hw-item-meta">
+        ${h.dueDate ? `<span>截止：${h.dueDate}</span>` : ''}
+        <span>by ${esc(h.trainer||'—')}</span>
+        <span>${h.createdAt}</span>
+      </div>
+      <div class="hw-sub-count">${hwSubs.length === 0 ? '尚無繳交' : `${hwSubs.length} 份繳交`}</div>
+      ${hwSubs.map(s => `
+        <div class="hw-sub-item">
+          <div style="margin-bottom:4px;color:#555">${s.submittedAt}${s.description ? '・' + esc(s.description) : ''}</div>
+          ${s.mediaUrl ? `<a href="${esc(s.mediaUrl)}" target="_blank">📎 查看影片</a>` : ''}
+          ${s.feedback
+            ? `<div class="hw-feedback-given">💬 已回饋：${esc(s.feedback)}</div>`
+            : `<div class="hw-feedback-form">
+                 <input id="fb-${s.id}" placeholder="輸入回饋給飼主…">
+                 <button onclick="sendFeedback('${s.id}','${clientId}')">送出</button>
+               </div>`
+          }
+        </div>`).join('')}
+    </div>`;
+  }).join('');
+}
+
+async function deleteHw(hwId, clientId) {
+  if (!confirm('確定刪除這個作業？')) return;
+  await fetch(SCRIPT_URL, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'deleteHomework', homeworkId: hwId })
+  });
+  await refreshHwList(clientId);
+}
+
+async function sendFeedback(subId, clientId) {
+  const val = document.getElementById(`fb-${subId}`).value.trim();
+  if (!val) return;
+  const j = await fetch(SCRIPT_URL, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'addFeedback', submissionId: subId, feedback: val })
+  }).then(r => r.json());
+  if (j.success) { showToast('✓ 回饋已送出'); await refreshHwList(clientId); }
+}
+
 async function loadData() {
   const btn = document.getElementById('refresh-btn');
   btn.classList.add('spinning');
@@ -2314,6 +2605,7 @@ function renderCard(c, idx = 0, periodInfo = null) {
     if (!done) actions.push(`<button class="act-btn act-btn-absence" onclick="confirmAbsence(${c._row},this)">＋ 請假</button>`);
   }
   actions.push(`<button class="act-btn-sm" onclick="openEditModal(${c._row})" title="編輯客戶資料" style="font-size:14px;">✏️</button>`);
+  actions.push(`<button class="hw-card-btn" onclick="event.stopPropagation();openHwModal(${c._row})" title="訓練作業">📋 作業</button>`);
   actions.push(`<button class="act-btn-sm" onclick="openModal(${c._row})">⋯</button>`);
 
   const delay = (Math.min(idx, 7) * 0.045).toFixed(3);
@@ -3659,6 +3951,54 @@ function renderDashboard() {
       onkeydown="if(event.key==='Enter')doLogin()">
     <div class="login-error" id="login-error"></div>
     <button class="login-btn" onclick="doLogin()">登入</button>
+  </div>
+</div>
+
+<!-- ══ 飼主 Portal ══════════════════════════════════════════════ -->
+<div id="portal-view" style="display:none;">
+  <div class="portal-header">
+    <div class="portal-header-logo">Z</div>
+    <div class="portal-header-text">
+      <div class="brand">ZenPet Academy</div>
+      <div class="sub">訓練日誌</div>
+    </div>
+  </div>
+  <div class="portal-body" id="portal-body">
+    <div class="portal-empty">載入中…</div>
+  </div>
+</div>
+
+<!-- ══ 作業管理 Modal（訓練師用）══════════════════════════════ -->
+<div class="hw-overlay" id="hw-overlay" onclick="closeHwModal()">
+  <div class="hw-modal" onclick="event.stopPropagation()">
+    <div class="hw-modal-head">
+      <h3 id="hw-modal-title">訓練作業</h3>
+      <button onclick="closeHwModal()">✕</button>
+    </div>
+
+    <!-- 飼主連結 -->
+    <div class="hw-link-box">
+      <label>飼主專屬連結（傳給飼主即可查看進度＋繳交作業）</label>
+      <div class="hw-link-row">
+        <input id="hw-portal-link-input" readonly placeholder="產生中…">
+        <button onclick="copyPortalLink()">複製連結</button>
+      </div>
+    </div>
+
+    <!-- 新增作業 -->
+    <div class="hw-add-form">
+      <h4>＋ 新增訓練作業</h4>
+      <input id="hw-new-title" placeholder="作業標題，例如：鬆繩隨行練習">
+      <textarea id="hw-new-desc" placeholder="說明練習方式、目標、注意事項…"></textarea>
+      <div class="hw-add-row">
+        <input id="hw-new-due" type="date" title="截止日（建議填下次上課日期）">
+        <button class="hw-submit-btn" onclick="submitNewHomework()">新增</button>
+      </div>
+    </div>
+
+    <!-- 現有作業列表 -->
+    <div class="hw-list-title">已指派的作業</div>
+    <div id="hw-list-body"></div>
   </div>
 </div>
 </body>

@@ -1206,6 +1206,14 @@
       <div style="font-size:12px;color:var(--muted);font-weight:600;margin-bottom:6px;">時間（選填）</div>
       <input type="time" id="time-input" style="width:100%;border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:11px 14px;font-size:15px;font-family:inherit;outline:none;color:var(--text);">
     </div>
+    <div style="margin-top:10px;">
+      <div style="font-size:12px;color:var(--muted);font-weight:600;margin-bottom:6px;">負責訓練師</div>
+      <select id="lesson-trainer-input" style="width:100%;border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:11px 14px;font-size:15px;font-family:inherit;outline:none;color:var(--text);background:var(--white);">
+        <option value="大廷 DaTing">大廷 DaTing</option>
+        <option value="羊桃 Sheepeach">羊桃 Sheepeach</option>
+        <option value="小褚 Henry">小褚 Henry</option>
+      </select>
+    </div>
     <div id="date-dup-warning" style="display:none;margin-top:10px;background:#fff3cd;border:1.5px solid #f0a500;border-radius:8px;padding:10px 12px;">
       <div style="font-size:12px;font-weight:800;color:#b45309;">⚠️ 這隻狗今天已有上課紀錄</div>
       <div id="date-dup-detail" style="font-size:11px;color:#92400e;margin-top:3px;"></div>
@@ -2730,6 +2738,12 @@ function confirmDate(rowIndex, type, btn) {
   document.getElementById('date-dup-warning').style.display = 'none';
   document.getElementById('date-dup-confirm').checked = false;
   document.getElementById('date-confirm-btn').onclick     = doAddSession;
+  // 預選負責訓練師（跟卡片一致，可手動改）
+  const trainerSel = document.getElementById('lesson-trainer-input');
+  if (trainerSel) {
+    const match = Array.from(trainerSel.options).find(o => o.value.includes((c.trainer||'').split(' ')[0]));
+    trainerSel.value = match ? match.value : (trainerSel.options[0]?.value || '');
+  }
   document.getElementById('date-modal').classList.add('open');
   checkDupDate();
 }
@@ -2748,13 +2762,15 @@ async function doAddSession() {
     return;
   }
 
+  const lessonTrainer = document.getElementById('lesson-trainer-input')?.value || '';
   closeDateModal();
 
   const rowIndex = pendingRow, type = pendingType, btn = pendingBtn;
   if (btn) btn.classList.add('loading');
   const label = type === 'class' ? '上課' : '代訓';
   const c = allClients.find(x => x._row === rowIndex);
-  const toastMsg = time ? `✓ ${label} +1（${date} ${time}）` : `✓ ${label} +1（${date}）`;
+  const trainerShort = (lessonTrainer || '').split(' ')[0];
+  const toastMsg = time ? `✓ ${label} +1（${date} ${time}）${trainerShort ? ' · ' + trainerShort : ''}` : `✓ ${label} +1（${date}）${trainerShort ? ' · ' + trainerShort : ''}`;
 
   if (isDemo) {
     await sleep(350);
@@ -2762,7 +2778,7 @@ async function doAddSession() {
       if (type === 'class') { c.classDone++; c.classLeft = Math.max(0, c.classLeft - 1); }
       else                  { c.trainDone++; c.trainLeft = Math.max(0, c.trainLeft - 1); }
       if (!c.lessonDates) c.lessonDates = [];
-      c.lessonDates.push({ date, time, type: label });
+      c.lessonDates.push({ date, time, type: label, trainer: lessonTrainer });
     }
     if (btn) { btn.classList.remove('loading'); btn.classList.add('success'); }
     setTimeout(() => { if (btn) btn.classList.remove('success'); renderAll(); }, 700);
@@ -2772,14 +2788,14 @@ async function doAddSession() {
 
   try {
     const payload = { action: type === 'class' ? 'addClass' : 'addTraining',
-      rowIndex, date, time, id: c?.id, dog: c?.dog, trainer: c?.trainer, owner: c?.owner, plan: c?.plan };
+      rowIndex, date, time, id: c?.id, dog: c?.dog, trainer: lessonTrainer, owner: c?.owner, plan: c?.plan };
     const json = await fetch(SCRIPT_URL, {method:'POST', body:JSON.stringify(payload)}).then(r=>r.json());
     if (!json.success) throw new Error(json.error);
     if (c) {
       if (type === 'class') { c.classDone++; c.classLeft = Math.max(0, c.classLeft - 1); }
       else                  { c.trainDone++; c.trainLeft = Math.max(0, c.trainLeft - 1); }
       if (!c.lessonDates) c.lessonDates = [];
-      c.lessonDates.push({ date, time, type: label });
+      c.lessonDates.push({ date, time, type: label, trainer: lessonTrainer });
     }
     if (btn) btn.classList.add('success');
     setTimeout(() => { if (btn) btn.classList.remove('success'); renderAll(); }, 700);
@@ -2899,6 +2915,11 @@ function openModal(rowIndex) {
             <option value="上課" ${d.type!=='代訓'?'selected':''}>上課</option>
             <option value="代訓" ${d.type==='代訓'?'selected':''}>代訓</option>
           </select>
+          <select class="lesson-edit-trainer" style="border:1.5px solid var(--border);border-radius:6px;padding:4px 6px;font-size:11px;color:var(--text);background:var(--white);">
+            <option value="大廷 DaTing" ${(d.trainer||'').includes('大廷')?'selected':''}>大廷</option>
+            <option value="羊桃 Sheepeach" ${(d.trainer||'').includes('羊桃')?'selected':''}>羊桃</option>
+            <option value="小褚 Henry" ${(d.trainer||'').includes('小褚')?'selected':''}>小褚</option>
+          </select>
         </div>`;
       }).join('')}</div>`
     : `<div class="no-lessons">尚無紀錄</div>`;
@@ -2985,11 +3006,12 @@ async function saveModal() {
       if (newDate !== origDate)
         absenceEdits.push({ origDate, newDate });
     } else {
-      const newTime = (row.querySelector('.lesson-edit-reason') || row.querySelector('.lesson-edit-time'))?.value || '';
-      const newType = row.querySelector('.lesson-edit-type')?.value;
-      const orig    = (c.lessonDates||[]).find(l => l.date === origDate);
-      if (orig && (newDate !== origDate || newTime !== (orig.time||'') || newType !== orig.type))
-        lessonEdits.push({ origDate, newDate, newTime, newType });
+      const newTime    = (row.querySelector('.lesson-edit-reason') || row.querySelector('.lesson-edit-time'))?.value || '';
+      const newType    = row.querySelector('.lesson-edit-type')?.value;
+      const newTrainer = row.querySelector('.lesson-edit-trainer')?.value || '';
+      const orig       = (c.lessonDates||[]).find(l => l.date === origDate);
+      if (orig && (newDate !== origDate || newTime !== (orig.time||'') || newType !== orig.type || newTrainer !== (orig.trainer||'')))
+        lessonEdits.push({ origDate, newDate, newTime, newType, newTrainer });
     }
   });
 
@@ -3000,7 +3022,7 @@ async function saveModal() {
       c.status = status; c.notes = notes; c.address = address;
       lessonEdits.forEach(e => {
         const l = (c.lessonDates||[]).find(l => l.date === e.origDate);
-        if (l) { l.date = e.newDate; l.time = e.newTime; l.type = e.newType; }
+        if (l) { l.date = e.newDate; l.time = e.newTime; l.type = e.newType; if (e.newTrainer) l.trainer = e.newTrainer; }
       });
       absenceEdits.forEach(e => {
         const idx = (c.absences||[]).indexOf(e.origDate);
@@ -3017,7 +3039,7 @@ async function saveModal() {
   if (address !== (c.address||'')) tasks.push({ action:'updateAddress', rowIndex:modalRow, address });
   lessonEdits.forEach(e => tasks.push({
     action:'updateLessonDate', id:c.id, dog:c.dog,
-    origDate:e.origDate, newDate:e.newDate, newTime:e.newTime, newType:e.newType
+    origDate:e.origDate, newDate:e.newDate, newTime:e.newTime, newType:e.newType, newTrainer:e.newTrainer
   }));
   absenceEdits.forEach(e => tasks.push({
     action:'updateAbsenceDate', rowIndex:modalRow, origDate:e.origDate, newDate:e.newDate
@@ -3030,7 +3052,7 @@ async function saveModal() {
       c.status = status; c.notes = notes; c.address = address;
       lessonEdits.forEach(e => {
         const l = (c.lessonDates||[]).find(l => l.date === e.origDate);
-        if (l) { l.date = e.newDate; l.time = e.newTime; l.type = e.newType; }
+        if (l) { l.date = e.newDate; l.time = e.newTime; l.type = e.newType; if (e.newTrainer) l.trainer = e.newTrainer; }
       });
       absenceEdits.forEach(e => {
         const idx = (c.absences||[]).indexOf(e.origDate);

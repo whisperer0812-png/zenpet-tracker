@@ -2670,11 +2670,21 @@ async function deleteClient(row) {
   // 立刻刪後端，不等 15 秒
   if (!isDemo) {
     try {
-      await fetch(SCRIPT_URL, {
+      const res = await fetch(SCRIPT_URL, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'deleteClient', rowIndex: row, clientId: c.id, clientDog: c.dog }),
-      });
-    } catch(e) { console.error('delete failed', e); }
+      }).then(r => r.json());
+      if (!res.success) {
+        showToast(`⚠️ 後端刪除失敗：${res.error || '未知錯誤'}，請重新部署 Apps Script`);
+      } else if (res.deleted === 0) {
+        showToast(`⚠️ Sheet 找不到這筆資料（ID: ${c.id}），可能已刪除`);
+      } else {
+        showToast(`✓ 已從 Sheet 刪除「${c.dog}」（共刪 ${res.deleted} 筆）`);
+      }
+    } catch(e) {
+      console.error('delete failed', e);
+      showToast(`⚠️ 刪除請求失敗：${e.message}`);
+    }
   }
 
   const undoBtn = document.getElementById('undo-btn');

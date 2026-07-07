@@ -2671,7 +2671,7 @@ async function deleteClient(row) {
   if (!isDemo) {
     try {
       const res = await fetch(SCRIPT_URL, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        method: 'POST',
         body: JSON.stringify({ action: 'deleteClient', rowIndex: row, clientId: c.id, clientDog: c.dog }),
       }).then(r => r.json());
       if (!res.success) {

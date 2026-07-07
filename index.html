@@ -2378,22 +2378,16 @@ function renderAlerts() {
 }
 
 function renderTrainerTabs() {
-  const dataTrainers = [...new Set(allClients.map(c=>c.trainer).filter(Boolean))];
-  // 只保留實際有客戶資料的訓練師，依 TRAINERS_INFO 順序排列
-  dataTrainers.sort((a,b) => {
-    const ai = TRAINERS_INFO.findIndex(t => a.includes(t.name));
-    const bi = TRAINERS_INFO.findIndex(t => b.includes(t.name));
-    if (ai !== -1 && bi !== -1) return ai - bi;
-    if (ai !== -1) return -1;
-    if (bi !== -1) return 1;
-    return a.localeCompare(b);
+  // 只顯示官方訓練師（TRAINERS_INFO），避免 Sheet 髒資料產生多餘 tab
+  const officialNames = TRAINERS_INFO.map(t => t.name);
+  const tabs = TRAINERS_INFO.map(t => {
+    const cnt = allClients.filter(c => c.trainer && c.trainer.includes(t.name)).length;
+    const fullName = allClients.find(c => c.trainer && c.trainer.includes(t.name))?.trainer || `${t.name} ${t.englishName}`;
+    return `<button class="tab-btn ${activeTrainer===t.name?'active':''}" onclick="setTrainer('${t.name}')">${esc(fullName)}<span class="tab-count">${cnt}</span></button>`;
   });
   document.getElementById('trainer-tabs').innerHTML = [
     `<button class="tab-btn ${activeTrainer==='all'?'active':''}" onclick="setTrainer('all')">全部<span class="tab-count">${allClients.length}</span></button>`,
-    ...dataTrainers.map(t => {
-      const cnt = allClients.filter(c=>c.trainer===t).length;
-      return `<button class="tab-btn ${activeTrainer===t?'active':''}" onclick="setTrainer('${esc(t)}')">${esc(t)}<span class="tab-count">${cnt}</span></button>`;
-    })
+    ...tabs
   ].join('');
 }
 
@@ -2418,7 +2412,7 @@ function buildPeriodMap(clients) {
 function renderClients() {
   const periodMap = buildPeriodMap(allClients);
   let list = allClients.slice();
-  if (activeTrainer !== 'all') list = list.filter(c => c.trainer === activeTrainer);
+  if (activeTrainer !== 'all') list = list.filter(c => c.trainer && c.trainer.includes(activeTrainer));
   if (activeStatus  !== 'all') {
     if (activeStatus === '結課') list = list.filter(c => c.status === '已結課' || c.classLeft === 0);
     else list = list.filter(c => c.status === activeStatus);
@@ -2654,14 +2648,24 @@ function renderCard(c, idx = 0, periodInfo = null) {
 // ── Delete client ──────────────────────────────────────────────
 let lastDeleted = null, undoTimer = null;
 
-function deleteClient(row) {
+async function deleteClient(row) {
   const c = allClients.find(x => x._row === row);
   if (!c) return;
-  if (!confirm(`確定要刪除「${c.dog}」的案例嗎？\n此操作可透過「↩ 回復」鈕撤回。`)) return;
+  if (!confirm(`確定要刪除「${c.dog}」的案例嗎？\n此操作可透過「↩ 回復」鈕撤回（15 秒內）。`)) return;
 
   lastDeleted = JSON.parse(JSON.stringify(c));
   allClients = allClients.filter(x => x._row !== row);
   renderClients();
+
+  // 立刻刪後端，不等 15 秒
+  if (!isDemo) {
+    try {
+      await fetch(SCRIPT_URL, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'deleteClient', rowIndex: row }),
+      });
+    } catch(e) { console.error('delete failed', e); }
+  }
 
   const undoBtn = document.getElementById('undo-btn');
   undoBtn.style.display = '';
@@ -2670,27 +2674,26 @@ function deleteClient(row) {
   undoTimer = setTimeout(() => {
     undoBtn.style.display = 'none';
     lastDeleted = null;
-    if (!isDemo) _doDeleteBackend(row);
   }, 15000);
 }
 
-function undoDelete() {
+async function undoDelete() {
   if (!lastDeleted) return;
   clearTimeout(undoTimer);
-  allClients.push(lastDeleted);
+  const c = lastDeleted;
   lastDeleted = null;
   document.getElementById('undo-btn').style.display = 'none';
-  renderClients();
-}
 
-async function _doDeleteBackend(row) {
-  try {
-    await fetch(SCRIPT_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'deleteClient', rowIndex: row }),
-    });
-  } catch(e) { console.error('delete failed', e); }
+  // 重新新增到 Sheet
+  if (!isDemo) {
+    try {
+      await fetch(SCRIPT_URL, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'addClient', ...c }),
+      });
+    } catch(e) { console.error('undo failed', e); }
+  }
+  loadData(); // 重新載入取得正確 _row
 }
 
 // ── Date confirm ───────────────────────────────────────────────

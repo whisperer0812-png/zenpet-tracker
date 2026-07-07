@@ -2675,11 +2675,12 @@ async function deleteClient(row) {
         body: JSON.stringify({ action: 'deleteClient', rowIndex: row, clientId: c.id, clientDog: c.dog }),
       }).then(r => r.json());
       if (!res.success) {
-        showToast(`⚠️ 後端刪除失敗：${res.error || '未知錯誤'}，請重新部署 Apps Script`);
+        showToast(`⚠️ 後端錯誤：${res.error || '未知'}`, 8000);
       } else if (res.deleted === 0) {
-        showToast(`⚠️ Sheet 找不到這筆資料（ID: ${c.id}），可能已刪除`);
+        const ids = (res.sheetIds || []).join(', ');
+        showToast(`⚠️ 沒刪到！送出ID="${res.sentId}"，Sheet中有：${ids}`, 10000);
       } else {
-        showToast(`✓ 已從 Sheet 刪除「${c.dog}」（共刪 ${res.deleted} 筆）`);
+        showToast(`✓ 刪除成功「${c.dog}」(${res.beforeRows}→${res.afterRows}行)`, 5000);
       }
     } catch(e) {
       console.error('delete failed', e);
